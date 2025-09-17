@@ -1,0 +1,59 @@
+---
+title: "Helicopter DOE Run Sheet Generator"
+format: html
+editor: visual
+---
+
+```{r}
+# === Paper Helicopter DOE Run Sheet Generator ===
+
+# Set random seed for reproducibility
+set.seed(2025)
+
+# Factor levels
+rotor_lengths <- c(7.5, 8.5)  # cm
+rotor_widths  <- c(3.5, 5.0)  # cm
+clips         <- c(0, 2)      # 0 = no clip, 1 = clip
+
+# Full factorial design (2^3 = 8 runs)
+design <- expand.grid(
+  RotorLength_cm = rotor_lengths,
+  RotorWidth_cm  = rotor_widths,
+  PaperClip      = clips
+)
+
+# Add factor codes
+design$A_RotorLength <- ifelse(design$RotorLength_cm == 7.5, "-", "+")
+design$B_RotorWidth  <- ifelse(design$RotorWidth_cm == 3.5, "-", "+")
+design$C_PaperClip   <- ifelse(design$PaperClip == 0, "-", "+")
+
+# Replicate the design 3 times (change reps if needed)
+reps <- 3
+full_design <- do.call(rbind, replicate(reps, design, simplify = FALSE))
+full_design$Replicate <- rep(1:reps, each = nrow(design))
+
+# Randomize the run order
+full_design <- full_design[sample(nrow(full_design)), ]
+rownames(full_design) <- NULL
+full_design$RunID <- seq_len(nrow(full_design))
+
+# Add empty columns for results
+full_design$Time_s <- ""
+
+# Reorder columns for clarity
+run_sheet <- full_design[, c("RunID","Replicate",
+                             "RotorLength_cm","RotorWidth_cm","PaperClip",
+                             "A_RotorLength","B_RotorWidth","C_PaperClip","Time_s")]
+
+# Save to CSV in your chosen folder
+write.csv(run_sheet, "C:/Users/mdnay/Downloads/DOE_Experiments/paper_helicopter_run_sheet.csv",
+          row.names = FALSE)
+
+# Confirm export worked
+print("CSV file saved to Downloads/DOE_Experiments folder.")
+
+
+# Print first few rows to check
+print(head(run_sheet, 12))
+
+```
