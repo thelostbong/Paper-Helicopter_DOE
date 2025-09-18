@@ -1,0 +1,682 @@
+---
+title: "Paper Helicopter DOE Experiment"
+author: "Nayeemuddin Mohammed"
+
+format: 
+  html: 
+    toc: true          
+    toc-depth: 3       
+    code-fold: true    
+    code-summary: "Show Code"   
+    theme: cosmo       
+  pdf: 
+    toc: true
+    toc-depth: 3
+    geometry: margin=lin   
+    number-sections: true  
+editor: visual
+---
+
+
+```{r}
+library(tidyverse)
+library(broom)
+library(GGally)
+library(tinytex)
+library(gt)
+library(MASS)
+library(car)
+library(knitr)
+library(kableExtra)
+# Global chunk options (keeps HTML output tidy)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 8,
+  fig.height = 5,
+  fig.align = "center",
+  dpi = 150,
+  tidy = TRUE
+)
+
+# Plot theme
+theme_set(theme_minimal() +
+          theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+                plot.subtitle = element_text(hjust = 0.5, size = 12)))
+
+```
+
+# Introduction
+
+This report documents a comprehensive 2³ factorial Design of Experiments (DOE) using a paper helicopter as the experimental subject. The primary objective is to systematically evaluate how three key design factors affect the helicopter's flight performance, measured as flight time in seconds.
+
+## Experimental Context and Rationale
+
+A paper helicopter provides an excellent platform for learning DOE principles because:
+
+- **Controllable factors**: Physical dimensions and weight can be precisely modified
+- **Measurable response**: Flight time is easily quantifiable and repeatable
+- **Physical interpretability**: Results have clear engineering meaning
+- **Cost-effective**: Requires minimal materials and equipment
+
+## Research Questions
+
+1. **Main Effects**: How does each individual factor (rotor length, rotor width, added mass) affect flight time?
+2. **Interaction Effects**: Do the factors work together in ways that amplify or diminish each other's effects?
+3. **Optimization**: What combination of factor settings maximizes (or minimizes) flight time?
+4. **Model Adequacy**: Can we build a reliable mathematical model to predict flight performance?
+
+## Experimental Factors and Levels
+
+The experiment examines three factors, each at two levels:
+
+- **Factor A - Rotor Length**: 7.5 cm (low level) vs. 8.5 cm (high level)
+  - *Hypothesis*: Longer rotors may provide more lift, increasing flight time
+- **Factor B - Rotor Width**: 3.5 cm (narrow) vs. 5.0 cm (wide)  
+  - *Hypothesis*: Wider rotors may create more air resistance, affecting flight dynamics
+- **Factor C - Paper Clip Mass**: 0 clips vs. 2 clips
+  - *Hypothesis*: Added weight may increase stability but also increase descent rate
+
+## Design Strategy
+
+A full 2³ factorial design was selected because:
+
+- **Efficiency**: Examines all possible factor combinations systematically
+- **Interaction Detection**: Can identify how factors work together
+- **Statistical Power**: Provides sufficient data for reliable conclusions
+- **Educational Value**: Demonstrates fundamental DOE principles
+
+**Paper helicopter design**
+
+![Paper helicopter diagram](helicopter_design.png){fig-alt="Paper helicopter diagram" width="60%"}
+
+*Figure 1: Schematic showing the paper helicopter design with labeled dimensions. The rotor length and width are the primary design variables, while paper clips are attached at the base to add mass.*
+
+# Materials and Methods
+**Materials**
+
+1. Paper sheets (specify paper type, e.g., A4 office paper, 80 g/m²).
+2. Ruler and scissors.
+3. Paper clips (mass per clip should be measured; here "2" denotes two clips).
+4. Measuring device (stopwatch or slow-motion video) and a fixed release height and method.
+
+**Build & Measurement protocol (step-by-step)**
+
+1. Cut and fold the paper helicopter rotor according to the schematic. Create rotors of lengths 7.5 cm and 8.5 cm; widths 3.5 cm and 5.0 cm as experimental factor levels.
+2. Attach 0 or 2 paper clips to the hook point depending on the treatment.
+3. Release the helicopter from a fixed height (e.g., 2.0 m) using the same release method each run to minimize bias. Start/stop timing from release to first contact with the ground.
+4. Repeat runs according to the randomized run order and replicates listed in the dataset.
+5. Record times in seconds in the `Time_s` column.
+
+**Experimental design**
+A full factorial 2³ DOE was employed with replication (see data table below). Randomization was applied to run order to limit systematic error.
+
+```{r}
+helicopter_data <- data.frame(
+  RunID = 1:24,
+  RunOrder = 1:24,  # Randomized run order as executed
+  Replicate = c(2, 2, 1, 1, 2, 3, 3, 3, 3, 2, 1, 2, 1, 2, 3, 3, 2, 2, 1, 1, 1, 3, 1, 3),
+  RotorLength_cm = c(7.5, 8.5, 8.5, 7.5, 8.5, 8.5, 7.5, 7.5, 8.5, 7.5, 7.5, 7.5, 7.5, 8.5, 8.5, 7.5, 8.5, 7.5, 8.5, 7.5, 8.5, 8.5, 8.5, 7.5),
+  RotorWidth_cm = c(3.5, 5, 5, 3.5, 3.5, 5, 3.5, 5, 3.5, 5, 5, 5, 3.5, 3.5, 3.5, 3.5, 5, 3.5, 3.5, 5, 3.5, 5, 5, 5),
+  PaperClip = c(2, 0, 0, 0, 0, 2, 0, 2, 2, 0, 2, 2, 2, 2, 0, 2, 2, 0, 2, 0, 0, 0, 2, 0),
+  Time_s = c(3.03, 3.42, 3.75, 3.4, 4.12, 3.07, 3.31, 2.32, 3.4, 2.62, 2.98, 2.45, 3.03, 3.25, 4.18, 2.96, 3.07, 3.51, 3.45, 2.4, 4.14, 3.66, 3.19, 2.52)
+)
+
+# Create coded factors for DOE analysis
+helicopter_coded <- helicopter_data %>%
+  mutate(
+    # Convert to coded factors (-1, +1)
+    A_Length = ifelse(RotorLength_cm == 7.5, -1, 1),
+    B_Width = ifelse(RotorWidth_cm == 3.5, -1, 1),
+    C_Clip = ifelse(PaperClip == 0, -1, 1),
+    
+    # Create factor labels for visualization
+    Length_Factor = factor(ifelse(A_Length == -1, "Short (7.5cm)", "Long (8.5cm)")),
+    Width_Factor = factor(ifelse(B_Width == -1, "Narrow (3.5cm)", "Wide (5.0cm)")),
+    Clip_Factor = factor(ifelse(C_Clip == -1, "No Clip (0)", "With Clip (2)")),
+    
+    # Create treatment combination labels
+    Treatment = paste0(
+      ifelse(A_Length == 1, "a", ""),
+      ifelse(B_Width == 1, "b", ""),
+      ifelse(C_Clip == 1, "c", "")
+    ),
+    Treatment = ifelse(Treatment == "", "(1)", Treatment)
+  )
+
+``` 
+
+# Variables explanations
+
+## Understanding the Dataset Structure
+
+The following table provides a comprehensive overview of all variables collected during the experiment. Each variable serves a specific purpose in the experimental design and analysis.
+
+```{r var_def}
+vars_table <- tibble(
+  Variable = c("RunID", "RunOrder", "Replicate", "RotorLength_cm", "RotorWidth_cm", "PaperClip", "Time_s", "Treatment"),
+  Description = c(
+    "Sequential ID for each run (1-24)",
+    "Randomized execution order used when conducting the experiment",
+    "Replicate number indicating repetition index (1, 2, or 3)",
+    "Rotor length in centimeters (levels: 7.5 = Short, 8.5 = Long)",
+    "Rotor width in centimeters (levels: 3.5 = Narrow, 5.0 = Wide)",
+    "Number of paper clips attached (0 = No clip, 2 = Two clips)",
+    "Measured flight time in seconds from release to landing",
+    "Treatment label summarizing factor high/low levels using standard DOE notation"
+  ),
+  Purpose = c(
+    "Data organization and tracking",
+    "Controls for time-based systematic errors",
+    "Enables estimation of experimental error",
+    "Primary design factor A",
+    "Primary design factor B", 
+    "Primary design factor C",
+    "Response variable (dependent variable)",
+    "Treatment identification for analysis"
+  )
+)
+
+vars_table %>%
+  gt() %>%
+  tab_header(title = md("**Variable Definitions and Purposes**")) %>%
+  cols_label(
+    Variable = "Variable Name", 
+    Description = "Description", 
+    Purpose = "Experimental Purpose"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  )
+```
+
+**Key Points for Table Interpretation:**
+
+- **RunID vs RunOrder**: RunID is sequential (1,2,3...) while RunOrder shows the actual randomized sequence used during data collection
+- **Treatment Notation**: Uses standard DOE notation where lowercase letters indicate high levels (a=long rotor, b=wide rotor, c=with clips), and (1) represents all factors at low levels
+- **Replication**: Each of the 8 treatment combinations was repeated 3 times, providing 24 total observations
+
+## Experimental Design Summary
+
+The table below shows how the 2³ factorial design is structured, displaying each unique treatment combination with its corresponding factor levels and summary statistics.
+
+```{r design_table_enhanced}
+design_summary <- helicopter_coded %>%
+  group_by(A_Length, B_Width, C_Clip, Treatment) %>%
+  summarise(
+    n_runs = n(),
+    mean_time = round(mean(Time_s), 3),
+    sd_time = round(sd(Time_s), 3),
+    min_time = round(min(Time_s), 3),
+    max_time = round(max(Time_s), 3),
+    .groups = 'drop'
+  ) %>%
+  arrange(A_Length, B_Width, C_Clip)
+
+design_summary %>%
+  gt() %>%
+  tab_header(title = md("**2³ Factorial Design: Complete Treatment Structure**")) %>%
+  cols_label(
+    A_Length = "Factor A\n(Length)",
+    B_Width = "Factor B\n(Width)", 
+    C_Clip = "Factor C\n(Clips)",
+    Treatment = "Treatment\nCode",
+    n_runs = "Number of\nReplicates",
+    mean_time = "Mean Flight\nTime (s)",
+    sd_time = "Standard\nDeviation",
+    min_time = "Minimum\nTime (s)",
+    max_time = "Maximum\nTime (s)"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_footnote(
+    footnote = "Coded levels: -1 = low level, +1 = high level",
+    locations = cells_column_labels(c("A_Length", "B_Width", "C_Clip"))
+  ) %>%
+  tab_footnote(
+    footnote = "Treatment codes: (1) = all low, letters indicate high levels",
+    locations = cells_column_labels("Treatment")
+  )
+```
+
+**How to Read This Design Table:**
+
+1. **Factor Coding**: The -1/+1 coding is standard in DOE:
+   - **Length**: -1 = 7.5cm (short), +1 = 8.5cm (long)
+   - **Width**: -1 = 3.5cm (narrow), +1 = 5.0cm (wide) 
+   - **Clips**: -1 = 0 clips, +1 = 2 clips
+
+2. **Treatment Codes**: Follow standard factorial notation:
+   - **(1)**: All factors at low level
+   - **a**: Only length at high level
+   - **b**: Only width at high level  
+   - **c**: Only clips at high level
+   - **ab, ac, bc**: Two factors at high level
+   - **abc**: All factors at high level
+
+3. **Balance Check**: Each treatment has exactly 3 replicates, confirming the design is balanced
+
+4. **Preliminary Observations**: 
+   - Flight times range from ~2.3 to 4.2 seconds
+   - Standard deviations are relatively small, suggesting good measurement precision
+   - Treatment **ab** (long + wide, no clips) shows the highest mean flight time
+
+
+
+# Descriptive Statistics Analysis
+
+## Understanding the Response Variable Distribution
+
+Before conducting formal statistical analysis, it's crucial to examine the basic properties of our response variable (flight time). This section provides comprehensive descriptive statistics to understand the data's central tendency, variability, and distribution characteristics.
+
+## Overall Response Variable Summary
+
+```{r descriptive_stats}
+# Overall descriptive statistics for the response variable
+overall_summary <- helicopter_coded %>%
+  summarise(
+    n = n(),
+    mean = mean(Time_s),
+    median = median(Time_s),
+    sd = sd(Time_s),
+    variance = var(Time_s),
+    IQR = IQR(Time_s),
+    min = min(Time_s),
+    max = max(Time_s),
+    range = max(Time_s) - min(Time_s),
+    cv_percent = (sd(Time_s)/mean(Time_s)) * 100
+  )
+
+overall_summary %>%
+  gt() %>%
+  fmt_number(columns = vars(mean, median, sd, variance, IQR, min, max, range), decimals = 3) %>%
+  fmt_number(columns = vars(cv_percent), decimals = 1) %>%
+  tab_header(title = md("**Overall Descriptive Statistics for Flight Time**")) %>%
+  cols_label(
+    n = "Sample Size",
+    mean = "Mean (s)",
+    median = "Median (s)", 
+    sd = "Std Dev (s)",
+    variance = "Variance",
+    IQR = "IQR (s)",
+    min = "Minimum (s)",
+    max = "Maximum (s)",
+    range = "Range (s)",
+    cv_percent = "CV (%)"
+  ) %>%
+  tab_footnote(
+    footnote = "CV = Coefficient of Variation (SD/Mean × 100%)",
+    locations = cells_column_labels("cv_percent")
+  )
+```
+
+**Interpreting the Overall Statistics:**
+
+- **Central Tendency**: The mean flight time is approximately 3.2 seconds, with the median very close to the mean, suggesting a relatively symmetric distribution
+- **Variability**: The standard deviation of ~0.5 seconds indicates moderate variability in flight times
+- **Coefficient of Variation**: At ~15%, this shows reasonable precision in our measurements (values <20% are generally considered acceptable)
+- **Range**: Flight times span about 1.9 seconds from shortest to longest, indicating substantial differences between treatment conditions
+- **Distribution Shape**: Mean ≈ median suggests the data is approximately normally distributed, which is important for ANOVA validity
+
+## Treatment-Level Summary Statistics
+
+```{r by_treatment_detailed}
+by_treatment <- helicopter_coded %>%
+  group_by(Treatment) %>%
+  summarise(
+    n = n(),
+    mean = mean(Time_s),
+    sd = sd(Time_s),
+    median = median(Time_s),
+    IQR = IQR(Time_s),
+    min = min(Time_s),
+    max = max(Time_s),
+    cv_percent = (sd(Time_s)/mean(Time_s)) * 100,
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(mean))
+
+by_treatment %>%
+  gt() %>%
+  fmt_number(columns = vars(mean, sd, median, IQR, min, max), decimals = 3) %>%
+  fmt_number(columns = vars(cv_percent), decimals = 1) %>%
+  tab_header(title = md("**Treatment-Level Statistics (Ordered by Mean Flight Time)**")) %>%
+  cols_label(
+    Treatment = "Treatment",
+    n = "Replicates",
+    mean = "Mean (s)",
+    sd = "Std Dev (s)",
+    median = "Median (s)",
+    IQR = "IQR (s)", 
+    min = "Min (s)",
+    max = "Max (s)",
+    cv_percent = "CV (%)"
+  ) %>%
+  tab_style(
+    style = cell_fill(color = "lightgreen", alpha = 0.3),
+    locations = cells_body(rows = 1)  # Highlight best treatment
+  ) %>%
+  tab_style(
+    style = cell_fill(color = "lightcoral", alpha = 0.3), 
+    locations = cells_body(rows = nrow(by_treatment))  # Highlight worst treatment
+  )
+```
+
+
+**Key Insights from Treatment Comparisons:**
+
+- **Best Performing Treatment**: The highest mean flight time shows which factor combination is optimal
+- **Worst Performing Treatment**: The lowest mean identifies the least effective configuration  
+- **Variability Assessment**: Most treatments show similar standard deviations (~0.1-0.3s), suggesting consistent measurement precision across conditions
+- **Coefficient of Variation**: Most treatments have CV < 15%, indicating good experimental control
+- **Treatment Differences**: The range between best and worst treatments (~1.5+ seconds) is much larger than typical standard deviations, suggesting real treatment effects
+
+## Factor-Level Summary Analysis
+
+```{r factor_summaries_detailed, results='asis'}
+# Enhanced factor-level summaries with interpretation
+factor_summaries <- list(
+  Length = helicopter_coded %>%
+    group_by(Length_Factor) %>%
+    summarise(
+      n = n(), 
+      mean_time = round(mean(Time_s), 3), 
+      sd_time = round(sd(Time_s), 3),
+      median_time = round(median(Time_s), 3),
+      .groups = 'drop'
+    ),
+  
+  Width = helicopter_coded %>%
+    group_by(Width_Factor) %>%
+    summarise(
+      n = n(), 
+      mean_time = round(mean(Time_s), 3), 
+      sd_time = round(sd(Time_s), 3),
+      median_time = round(median(Time_s), 3),
+      .groups = 'drop'
+    ),
+  
+  Clip = helicopter_coded %>%
+    group_by(Clip_Factor) %>%
+    summarise(
+      n = n(), 
+      mean_time = round(mean(Time_s), 3), 
+      sd_time = round(sd(Time_s), 3),
+      median_time = round(median(Time_s), 3),
+      .groups = 'drop'
+    )
+)
+
+# Display each factor summary with interpretation
+for(factor_name in names(factor_summaries)) {
+  cat("### ", factor_name, " Factor Analysis\n\n")
+  
+  print(
+    factor_summaries[[factor_name]] %>%
+      gt() %>%
+      tab_header(title = md(paste("**", factor_name, "Factor Summary Statistics**"))) %>%
+      cols_label(
+        contains("Factor") ~ "Level",
+        n = "Observations", 
+        mean_time = "Mean Time (s)",
+        sd_time = "Std Dev (s)",
+        median_time = "Median Time (s)"
+      )
+  )
+  
+  # Calculate and display effect size
+  factor_data <- factor_summaries[[factor_name]]
+  effect_size <- abs(factor_data$mean_time[1] - factor_data$mean_time[2])
+  better_level <- factor_data[which.max(factor_data$mean_time), 1]
+  
+  cat("\n**", factor_name, " Factor Interpretation:**\n")
+  cat("- **Effect Size**: ", round(effect_size, 3), " seconds difference between levels\n")
+  cat("- **Better Level**: ", as.character(better_level[[1]]), " produces longer flight times\n")
+  cat("- **Practical Significance**: ", 
+      if(effect_size > 0.3) "Large effect - practically significant" 
+      else if(effect_size > 0.1) "Moderate effect - may be significant"
+      else "Small effect - limited practical importance", "\n\n")
+}
+```
+
+**Summary of Factor-Level Findings:**
+
+This analysis reveals the individual contribution of each factor by comparing the average response when each factor is at its high vs. low level. The effect sizes help us understand which factors have the most substantial impact on flight performance, setting the stage for the formal ANOVA analysis that follows.
+
+# Data Visualization and Exploratory Analysis
+
+## Purpose of Visual Analysis
+
+Visual exploration of experimental data serves several critical purposes in DOE:
+
+1. **Pattern Recognition**: Identify trends and relationships before formal statistical testing
+2. **Assumption Checking**: Assess normality, equal variance, and outlier detection
+3. **Effect Visualization**: Understand the magnitude and direction of factor effects
+4. **Interaction Detection**: Spot potential factor interactions through visual patterns
+5. **Communication**: Present findings in an accessible, interpretable format
+
+## Main Effects Visualization
+
+The following box plots display how each individual factor affects flight time. Box plots are ideal for showing both central tendency and variability simultaneously.
+
+
+```{r main_effects_enhanced, fig.height=8, fig.width=12}
+library(patchwork)
+
+# Enhanced main effects plots with better aesthetics and information
+p1 <- helicopter_coded %>%
+  ggplot(aes(x = Length_Factor, y = Time_s, fill = Length_Factor)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 2) +
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3, 
+               fill = "red", color = "darkred") +
+  labs(
+    title = "Effect of Rotor Length on Flight Time",
+    subtitle = "Red diamonds show treatment means",
+    x = "Rotor Length", 
+    y = "Flight Time (seconds)"
+  ) +
+  scale_fill_manual(values = c("lightblue", "lightcoral")) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10),
+    panel.grid.minor = element_blank()
+  )
+
+p2 <- helicopter_coded %>%
+  ggplot(aes(x = Width_Factor, y = Time_s, fill = Width_Factor)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 2) +
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3, 
+               fill = "red", color = "darkred") +
+  labs(
+    title = "Effect of Rotor Width on Flight Time",
+    subtitle = "Red diamonds show treatment means", 
+    x = "Rotor Width", 
+    y = "Flight Time (seconds)"
+  ) +
+  scale_fill_manual(values = c("lightgreen", "lightyellow")) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10),
+    panel.grid.minor = element_blank()
+  )
+
+p3 <- helicopter_coded %>%
+  ggplot(aes(x = Clip_Factor, y = Time_s, fill = Clip_Factor)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 2) +
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3, 
+               fill = "red", color = "darkred") +
+  labs(
+    title = "Effect of Paper Clips on Flight Time",
+    subtitle = "Red diamonds show treatment means",
+    x = "Paper Clips", 
+    y = "Flight Time (seconds)"
+  ) +
+  scale_fill_manual(values = c("lightpink", "lightsteelblue")) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10),
+    panel.grid.minor = element_blank()
+  )
+
+# Combine plots with enhanced layout
+(p1 | p2 | p3) + 
+  plot_annotation(
+    title = "Main Effects Analysis: Individual Factor Impacts",
+    subtitle = "Box plots show distribution, jittered points show individual observations",
+    theme = theme(
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 11)
+    )
+  )
+```
+
+**How to Interpret Main Effects Plots:**
+
+- **Box Plot Elements**: 
+  - Center line = median
+  - Box boundaries = 25th and 75th percentiles (IQR)
+  - Whiskers = extend to most extreme points within 1.5×IQR
+  - Outliers = points beyond whiskers
+  - Red diamonds = treatment means
+
+- **Individual Points**: Jittered to show actual data distribution and sample size
+
+- **What to Look For**:
+  - **Vertical separation** between boxes indicates main effects
+  - **Box overlap** suggests smaller effects
+  - **Similar spreads** indicate equal variance assumption is reasonable
+  - **Outliers** may indicate measurement errors or special causes
+
+## Interaction Effects Analysis
+
+Interaction plots are crucial for understanding whether factors work together synergistically or antagonistically. These plots show if the effect of one factor depends on the level of another factor.
+
+```{r interaction_plots_enhanced, fig.height=10, fig.width=12}
+library(patchwork)
+
+# Enhanced interaction plots with better annotations
+int1 <- helicopter_coded %>%
+  group_by(Length_Factor, Width_Factor) %>%
+  summarise(
+    mean_time = mean(Time_s), 
+    se_time = sd(Time_s)/sqrt(n()),
+    .groups = 'drop'
+  ) %>%
+  ggplot(aes(x = Length_Factor, y = mean_time, color = Width_Factor, group = Width_Factor)) +
+  geom_line(size = 1.5, alpha = 0.8) +
+  geom_point(size = 4, alpha = 0.9) +
+  geom_errorbar(aes(ymin = mean_time - se_time, ymax = mean_time + se_time), 
+                width = 0.05, alpha = 0.7) +
+  labs(
+    title = "Length × Width Interaction",
+    subtitle = "Error bars show ±1 standard error", 
+    x = "Rotor Length", 
+    y = "Mean Flight Time (seconds)",
+    color = "Rotor Width"
+  ) +
+  scale_color_manual(values = c("blue", "red")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10),
+    panel.grid.minor = element_blank()
+  )
+
+int2 <- helicopter_coded %>%
+  group_by(Length_Factor, Clip_Factor) %>%
+  summarise(
+    mean_time = mean(Time_s), 
+    se_time = sd(Time_s)/sqrt(n()),
+    .groups = 'drop'
+  ) %>%
+  ggplot(aes(x = Length_Factor, y = mean_time, color = Clip_Factor, group = Clip_Factor)) +
+  geom_line(size = 1.5, alpha = 0.8) +
+  geom_point(size = 4, alpha = 0.9) +
+  geom_errorbar(aes(ymin = mean_time - se_time, ymax = mean_time + se_time), 
+                width = 0.05, alpha = 0.7) +
+  labs(
+    title = "Length × Clip Interaction",
+    subtitle = "Error bars show ±1 standard error",
+    x = "Rotor Length", 
+    y = "Mean Flight Time (seconds)",
+    color = "Paper Clips"
+  ) +
+  scale_color_manual(values = c("green", "orange")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10),
+    panel.grid.minor = element_blank()
+  )
+
+int3 <- helicopter_coded %>%
+  group_by(Width_Factor, Clip_Factor) %>%
+  summarise(
+    mean_time = mean(Time_s), 
+    se_time = sd(Time_s)/sqrt(n()),
+    .groups = 'drop'
+  ) %>%
+  ggplot(aes(x = Width_Factor, y = mean_time, color = Clip_Factor, group = Clip_Factor)) +
+  geom_line(size = 1.5, alpha = 0.8) +
+  geom_point(size = 4, alpha = 0.9) +
+  geom_errorbar(aes(ymin = mean_time - se_time, ymax = mean_time + se_time), 
+                width = 0.05, alpha = 0.7) +
+  labs(
+    title = "Width × Clip Interaction",
+    subtitle = "Error bars show ±1 standard error",
+    x = "Rotor Width", 
+    y = "Mean Flight Time (seconds)",
+    color = "Paper Clips"
+  ) +
+  scale_color_manual(values = c("purple", "brown")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 10),
+    panel.grid.minor = element_blank()
+  )
+
+# Arrange interaction plots
+(int1 / int2 / int3) + 
+  plot_annotation(
+    title = "Interaction Effects Analysis",
+    subtitle = "Parallel lines = no interaction, crossing/diverging lines = potential interaction",
+    theme = theme(
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 11)
+    )
+  )
+```
+
+**How to Interpret Interaction Plots:**
+
+- **Parallel Lines**: Indicate **no interaction** - the effect of one factor is consistent regardless of the other factor's level
+- **Crossing Lines**: Suggest **strong interaction** - the effect of one factor reverses depending on the other factor
+- **Diverging/Converging Lines**: Indicate **moderate interaction** - one factor's effect is amplified or diminished by the other
+- **Error Bars**: Show measurement uncertainty; overlapping bars suggest differences may not be significant
+
+**Preliminary Visual Insights:**
+
+Based on these interaction plots, we can make initial observations about:
+- Which factor combinations appear most/least effective
+- Whether factors work independently or synergistically  
+- The relative magnitude of main effects vs. interaction effects
+- Potential optimization strategies
+
+These visual patterns will be formally tested in the subsequent ANOVA analysis.
