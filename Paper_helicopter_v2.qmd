@@ -17,7 +17,6 @@ format:
 editor: visual
 ---
 
-
 ```{r}
 library(tidyverse)
 library(broom)
@@ -55,37 +54,37 @@ This report documents a comprehensive 2³ factorial Design of Experiments (DOE) 
 
 A paper helicopter provides an excellent platform for learning DOE principles because:
 
-- **Controllable factors**: Physical dimensions and weight can be precisely modified
-- **Measurable response**: Flight time is easily quantifiable and repeatable
-- **Physical interpretability**: Results have clear engineering meaning
-- **Cost-effective**: Requires minimal materials and equipment
+-   **Controllable factors**: Physical dimensions and weight can be precisely modified
+-   **Measurable response**: Flight time is easily quantifiable and repeatable
+-   **Physical interpretability**: Results have clear engineering meaning
+-   **Cost-effective**: Requires minimal materials and equipment
 
 ## Research Questions
 
-1. **Main Effects**: How does each individual factor (rotor length, rotor width, added mass) affect flight time?
-2. **Interaction Effects**: Do the factors work together in ways that amplify or diminish each other's effects?
-3. **Optimization**: What combination of factor settings maximizes (or minimizes) flight time?
-4. **Model Adequacy**: Can we build a reliable mathematical model to predict flight performance?
+1.  **Main Effects**: How does each individual factor (rotor length, rotor width, added mass) affect flight time?
+2.  **Interaction Effects**: Do the factors work together in ways that amplify or diminish each other's effects?
+3.  **Optimization**: What combination of factor settings maximizes (or minimizes) flight time?
+4.  **Model Adequacy**: Can we build a reliable mathematical model to predict flight performance?
 
 ## Experimental Factors and Levels
 
 The experiment examines three factors, each at two levels:
 
-- **Factor A - Rotor Length**: 7.5 cm (low level) vs. 8.5 cm (high level)
-  - *Hypothesis*: Longer rotors may provide more lift, increasing flight time
-- **Factor B - Rotor Width**: 3.5 cm (narrow) vs. 5.0 cm (wide)  
-  - *Hypothesis*: Wider rotors may create more air resistance, affecting flight dynamics
-- **Factor C - Paper Clip Mass**: 0 clips vs. 2 clips
-  - *Hypothesis*: Added weight may increase stability but also increase descent rate
+-   **Factor A - Rotor Length**: 7.5 cm (low level) vs. 8.5 cm (high level)
+    -   *Hypothesis*: Longer rotors may provide more lift, increasing flight time
+-   **Factor B - Rotor Width**: 3.5 cm (narrow) vs. 5.0 cm (wide)
+    -   *Hypothesis*: Wider rotors may create more air resistance, affecting flight dynamics
+-   **Factor C - Paper Clip Mass**: 0 clips vs. 2 clips
+    -   *Hypothesis*: Added weight may increase stability but also increase descent rate
 
 ## Design Strategy
 
 A full 2³ factorial design was selected because:
 
-- **Efficiency**: Examines all possible factor combinations systematically
-- **Interaction Detection**: Can identify how factors work together
-- **Statistical Power**: Provides sufficient data for reliable conclusions
-- **Educational Value**: Demonstrates fundamental DOE principles
+-   **Efficiency**: Examines all possible factor combinations systematically
+-   **Interaction Detection**: Can identify how factors work together
+-   **Statistical Power**: Provides sufficient data for reliable conclusions
+-   **Educational Value**: Demonstrates fundamental DOE principles
 
 **Paper helicopter design**
 
@@ -94,23 +93,23 @@ A full 2³ factorial design was selected because:
 *Figure 1: Schematic showing the paper helicopter design with labeled dimensions. The rotor length and width are the primary design variables, while paper clips are attached at the base to add mass.*
 
 # Materials and Methods
+
 **Materials**
 
-1. Paper sheets (specify paper type, e.g., A4 office paper, 80 g/m²).
-2. Ruler and scissors.
-3. Paper clips (mass per clip should be measured; here "2" denotes two clips).
-4. Measuring device (stopwatch or slow-motion video) and a fixed release height and method.
+1.  Paper sheets (specify paper type, e.g., A4 office paper, 80 g/m²).
+2.  Ruler and scissors.
+3.  Paper clips (mass per clip should be measured; here "2" denotes two clips).
+4.  Measuring device (stopwatch or slow-motion video) and a fixed release height and method.
 
 **Build & Measurement protocol (step-by-step)**
 
-1. Cut and fold the paper helicopter rotor according to the schematic. Create rotors of lengths 7.5 cm and 8.5 cm; widths 3.5 cm and 5.0 cm as experimental factor levels.
-2. Attach 0 or 2 paper clips to the hook point depending on the treatment.
-3. Release the helicopter from a fixed height (e.g., 2.0 m) using the same release method each run to minimize bias. Start/stop timing from release to first contact with the ground.
-4. Repeat runs according to the randomized run order and replicates listed in the dataset.
-5. Record times in seconds in the `Time_s` column.
+1.  Cut and fold the paper helicopter rotor according to the schematic. Create rotors of lengths 7.5 cm and 8.5 cm; widths 3.5 cm and 5.0 cm as experimental factor levels.
+2.  Attach 0 or 2 paper clips to the hook point depending on the treatment.
+3.  Release the helicopter from a fixed height (e.g., 2.0 m) using the same release method each run to minimize bias. Start/stop timing from release to first contact with the ground.
+4.  Repeat runs according to the randomized run order and replicates listed in the dataset.
+5.  Record times in seconds in the `Time_s` column.
 
-**Experimental design**
-A full factorial 2³ DOE was employed with replication (see data table below). Randomization was applied to run order to limit systematic error.
+**Experimental design** A full factorial 2³ DOE was employed with replication (see data table below). Randomization was applied to run order to limit systematic error.
 
 ```{r}
 helicopter_data <- data.frame(
@@ -145,7 +144,7 @@ helicopter_coded <- helicopter_data %>%
     Treatment = ifelse(Treatment == "", "(1)", Treatment)
   )
 
-``` 
+```
 
 # Variables explanations
 
@@ -194,9 +193,9 @@ vars_table %>%
 
 **Key Points for Table Interpretation:**
 
-- **RunID vs RunOrder**: RunID is sequential (1,2,3...) while RunOrder shows the actual randomized sequence used during data collection
-- **Treatment Notation**: Uses standard DOE notation where lowercase letters indicate high levels (a=long rotor, b=wide rotor, c=with clips), and (1) represents all factors at low levels
-- **Replication**: Each of the 8 treatment combinations was repeated 3 times, providing 24 total observations
+-   **RunID vs RunOrder**: RunID is sequential (1,2,3...) while RunOrder shows the actual randomized sequence used during data collection
+-   **Treatment Notation**: Uses standard DOE notation where lowercase letters indicate high levels (a=long rotor, b=wide rotor, c=with clips), and (1) represents all factors at low levels
+-   **Replication**: Each of the 8 treatment combinations was repeated 3 times, providing 24 total observations
 
 ## Experimental Design Summary
 
@@ -245,27 +244,28 @@ design_summary %>%
 
 **How to Read This Design Table:**
 
-1. **Factor Coding**: The -1/+1 coding is standard in DOE:
-   - **Length**: -1 = 7.5cm (short), +1 = 8.5cm (long)
-   - **Width**: -1 = 3.5cm (narrow), +1 = 5.0cm (wide) 
-   - **Clips**: -1 = 0 clips, +1 = 2 clips
+1.  **Factor Coding**: The -1/+1 coding is standard in DOE:
 
-2. **Treatment Codes**: Follow standard factorial notation:
-   - **(1)**: All factors at low level
-   - **a**: Only length at high level
-   - **b**: Only width at high level  
-   - **c**: Only clips at high level
-   - **ab, ac, bc**: Two factors at high level
-   - **abc**: All factors at high level
+    -   **Length**: -1 = 7.5cm (short), +1 = 8.5cm (long)
+    -   **Width**: -1 = 3.5cm (narrow), +1 = 5.0cm (wide)
+    -   **Clips**: -1 = 0 clips, +1 = 2 clips
 
-3. **Balance Check**: Each treatment has exactly 3 replicates, confirming the design is balanced
+2.  **Treatment Codes**: Follow standard factorial notation:
 
-4. **Preliminary Observations**: 
-   - Flight times range from ~2.3 to 4.2 seconds
-   - Standard deviations are relatively small, suggesting good measurement precision
-   - Treatment **ab** (long + wide, no clips) shows the highest mean flight time
+    -   **(1)**: All factors at low level
+    -   **a**: Only length at high level
+    -   **b**: Only width at high level\
+    -   **c**: Only clips at high level
+    -   **ab, ac, bc**: Two factors at high level
+    -   **abc**: All factors at high level
 
+3.  **Balance Check**: Each treatment has exactly 3 replicates, confirming the design is balanced
 
+4.  **Preliminary Observations**:
+
+    -   Flight times range from \~2.3 to 4.2 seconds
+    -   Standard deviations are relatively small, suggesting good measurement precision
+    -   Treatment **ab** (long + wide, no clips) shows the highest mean flight time
 
 # Descriptive Statistics Analysis
 
@@ -316,11 +316,11 @@ overall_summary %>%
 
 **Interpreting the Overall Statistics:**
 
-- **Central Tendency**: The mean flight time is approximately 3.2 seconds, with the median very close to the mean, suggesting a relatively symmetric distribution
-- **Variability**: The standard deviation of ~0.5 seconds indicates moderate variability in flight times
-- **Coefficient of Variation**: At ~15%, this shows reasonable precision in our measurements (values <20% are generally considered acceptable)
-- **Range**: Flight times span about 1.9 seconds from shortest to longest, indicating substantial differences between treatment conditions
-- **Distribution Shape**: Mean ≈ median suggests the data is approximately normally distributed, which is important for ANOVA validity
+-   **Central Tendency**: The mean flight time is approximately 3.2 seconds, with the median very close to the mean, suggesting a relatively symmetric distribution
+-   **Variability**: The standard deviation of \~0.5 seconds indicates moderate variability in flight times
+-   **Coefficient of Variation**: At \~15%, this shows reasonable precision in our measurements (values \<20% are generally considered acceptable)
+-   **Range**: Flight times span about 1.9 seconds from shortest to longest, indicating substantial differences between treatment conditions
+-   **Distribution Shape**: Mean ≈ median suggests the data is approximately normally distributed, which is important for ANOVA validity
 
 ## Treatment-Level Summary Statistics
 
@@ -366,14 +366,13 @@ by_treatment %>%
   )
 ```
 
-
 **Key Insights from Treatment Comparisons:**
 
-- **Best Performing Treatment**: The highest mean flight time shows which factor combination is optimal
-- **Worst Performing Treatment**: The lowest mean identifies the least effective configuration  
-- **Variability Assessment**: Most treatments show similar standard deviations (~0.1-0.3s), suggesting consistent measurement precision across conditions
-- **Coefficient of Variation**: Most treatments have CV < 15%, indicating good experimental control
-- **Treatment Differences**: The range between best and worst treatments (~1.5+ seconds) is much larger than typical standard deviations, suggesting real treatment effects
+-   **Best Performing Treatment**: The highest mean flight time shows which factor combination is optimal
+-   **Worst Performing Treatment**: The lowest mean identifies the least effective configuration\
+-   **Variability Assessment**: Most treatments show similar standard deviations (\~0.1-0.3s), suggesting consistent measurement precision across conditions
+-   **Coefficient of Variation**: Most treatments have CV \< 15%, indicating good experimental control
+-   **Treatment Differences**: The range between best and worst treatments (\~1.5+ seconds) is much larger than typical standard deviations, suggesting real treatment effects
 
 ## Factor-Level Summary Analysis
 
@@ -453,16 +452,15 @@ This analysis reveals the individual contribution of each factor by comparing th
 
 Visual exploration of experimental data serves several critical purposes in DOE:
 
-1. **Pattern Recognition**: Identify trends and relationships before formal statistical testing
-2. **Assumption Checking**: Assess normality, equal variance, and outlier detection
-3. **Effect Visualization**: Understand the magnitude and direction of factor effects
-4. **Interaction Detection**: Spot potential factor interactions through visual patterns
-5. **Communication**: Present findings in an accessible, interpretable format
+1.  **Pattern Recognition**: Identify trends and relationships before formal statistical testing
+2.  **Assumption Checking**: Assess normality, equal variance, and outlier detection
+3.  **Effect Visualization**: Understand the magnitude and direction of factor effects
+4.  **Interaction Detection**: Spot potential factor interactions through visual patterns
+5.  **Communication**: Present findings in an accessible, interpretable format
 
 ## Main Effects Visualization
 
 The following box plots display how each individual factor affects flight time. Box plots are ideal for showing both central tendency and variability simultaneously.
-
 
 ```{r main_effects_enhanced, fig.height=8, fig.width=12}
 library(patchwork)
@@ -545,20 +543,22 @@ p3 <- helicopter_coded %>%
 
 **How to Interpret Main Effects Plots:**
 
-- **Box Plot Elements**: 
-  - Center line = median
-  - Box boundaries = 25th and 75th percentiles (IQR)
-  - Whiskers = extend to most extreme points within 1.5×IQR
-  - Outliers = points beyond whiskers
-  - Red diamonds = treatment means
+-   **Box Plot Elements**:
 
-- **Individual Points**: Jittered to show actual data distribution and sample size
+    -   Center line = median
+    -   Box boundaries = 25th and 75th percentiles (IQR)
+    -   Whiskers = extend to most extreme points within 1.5×IQR
+    -   Outliers = points beyond whiskers
+    -   Red diamonds = treatment means
 
-- **What to Look For**:
-  - **Vertical separation** between boxes indicates main effects
-  - **Box overlap** suggests smaller effects
-  - **Similar spreads** indicate equal variance assumption is reasonable
-  - **Outliers** may indicate measurement errors or special causes
+-   **Individual Points**: Jittered to show actual data distribution and sample size
+
+-   **What to Look For**:
+
+    -   **Vertical separation** between boxes indicates main effects
+    -   **Box overlap** suggests smaller effects
+    -   **Similar spreads** indicate equal variance assumption is reasonable
+    -   **Outliers** may indicate measurement errors or special causes
 
 ## Interaction Effects Analysis
 
@@ -666,17 +666,835 @@ int3 <- helicopter_coded %>%
 
 **How to Interpret Interaction Plots:**
 
-- **Parallel Lines**: Indicate **no interaction** - the effect of one factor is consistent regardless of the other factor's level
-- **Crossing Lines**: Suggest **strong interaction** - the effect of one factor reverses depending on the other factor
-- **Diverging/Converging Lines**: Indicate **moderate interaction** - one factor's effect is amplified or diminished by the other
-- **Error Bars**: Show measurement uncertainty; overlapping bars suggest differences may not be significant
+-   **Parallel Lines**: Indicate **no interaction** - the effect of one factor is consistent regardless of the other factor's level
+-   **Crossing Lines**: Suggest **strong interaction** - the effect of one factor reverses depending on the other factor
+-   **Diverging/Converging Lines**: Indicate **moderate interaction** - one factor's effect is amplified or diminished by the other
+-   **Error Bars**: Show measurement uncertainty; overlapping bars suggest differences may not be significant
 
 **Preliminary Visual Insights:**
 
-Based on these interaction plots, we can make initial observations about:
-- Which factor combinations appear most/least effective
-- Whether factors work independently or synergistically  
-- The relative magnitude of main effects vs. interaction effects
-- Potential optimization strategies
+Based on these interaction plots, we can make initial observations about: - Which factor combinations appear most/least effective - Whether factors work independently or synergistically\
+- The relative magnitude of main effects vs. interaction effects - Potential optimization strategies
 
 These visual patterns will be formally tested in the subsequent ANOVA analysis.
+
+# ANOVA Analysis
+
+## Understanding Analysis of Variance in Factorial Experiments
+
+Analysis of Variance (ANOVA) is the primary statistical method for analyzing factorial experiments. It allows us to:
+
+1. **Partition Total Variation**: Separate the total variation in flight times into components attributable to each factor, their interactions, and random error
+2. **Test Statistical Significance**: Determine which effects are larger than what we'd expect from random variation alone
+3. **Quantify Effect Sizes**: Measure how much each factor contributes to the overall variation
+4. **Validate Model Assumptions**: Check if our data meets the requirements for valid statistical inference
+
+## The ANOVA Model
+
+For our 2³ factorial experiment, the statistical model is:
+
+**Y_ijkl = μ + A_i + B_j + C_k + (AB)_ij + (AC)_ik + (BC)_jk + (ABC)_ijk + ε_ijkl**
+
+Where:
+- **Y_ijkl** = observed flight time
+- **μ** = overall mean flight time
+- **A_i, B_j, C_k** = main effects of Length, Width, and Clips
+- **(AB), (AC), (BC)** = two-factor interactions
+- **(ABC)** = three-factor interaction
+- **ε_ijkl** = random error term
+
+```{r anova_analysis_explained}
+# Load required libraries for this section
+library(dplyr)
+library(broom) 
+library(gt)
+library(stringr)
+library(car)
+
+# Fit the full factorial model
+model_full <- lm(Time_s ~ A_Length * B_Width * C_Clip, data = helicopter_coded)
+
+# Generate ANOVA table
+anova_table <- anova(model_full)
+model_summary <- summary(model_full)
+
+# Create enhanced ANOVA table with interpretations
+anova_tidy <- tidy(anova_table) %>%
+  mutate(
+    term = case_when(
+      term == "A_Length" ~ "A: Rotor Length",
+      term == "B_Width" ~ "B: Rotor Width", 
+      term == "C_Clip" ~ "C: Paper Clip",
+      term == "A_Length:B_Width" ~ "AB: Length × Width",
+      term == "A_Length:C_Clip" ~ "AC: Length × Clip",
+      term == "B_Width:C_Clip" ~ "BC: Width × Clip",
+      term == "A_Length:B_Width:C_Clip" ~ "ABC: Length × Width × Clip",
+      term == "Residuals" ~ "Error",
+      TRUE ~ term
+    ),
+    # Calculate percentage of total variation explained
+    ss_percent = round((sumsq / sum(sumsq)) * 100, 1),
+    # Add significance indicators
+    significance = case_when(
+      is.na(p.value) ~ "",
+      p.value < 0.001 ~ "***",
+      p.value < 0.01 ~ "**", 
+      p.value < 0.05 ~ "*",
+      p.value < 0.1 ~ ".",
+      TRUE ~ ""
+    ),
+    across(where(is.numeric), ~round(.x, 4))
+  ) %>%
+  dplyr::select(
+    Source = term, 
+    DF = df, 
+    SS = sumsq, 
+    `SS%` = ss_percent,
+    MS = meansq, 
+    `F-value` = statistic, 
+    `p-value` = p.value,
+    Sig = significance
+  )
+
+# Display enhanced ANOVA table
+anova_tidy %>%
+  gt() %>%
+  tab_header(title = md("**ANOVA Table for 2³ Factorial Design**")) %>%
+  tab_footnote(
+    footnote = "Significance codes: *** p<0.001, ** p<0.01, * p<0.05, . p<0.1",
+    locations = cells_column_labels("Sig")
+  ) %>%
+  tab_footnote(
+    footnote = "SS% = Percentage of total sum of squares explained by each source",
+    locations = cells_column_labels("SS%")
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  # Highlight significant effects
+  tab_style(
+    style = cell_fill(color = "lightgreen", alpha = 0.3),
+    locations = cells_body(
+      rows = !is.na(`p-value`) & `p-value` < 0.05
+    )
+  )
+```
+
+## Interpreting the ANOVA Results
+
+```{r model_fit_stats, echo=FALSE}
+# Calculate key model statistics for inline use
+r_squared <- summary(model_full)$r.squared
+adj_r_squared <- summary(model_full)$adj.r.squared
+residual_se <- summary(model_full)$sigma
+```
+
+### Overall Model Performance
+
+**R-squared (R²): `r sprintf("%.3f", r_squared)`**
+
+- **Interpretation:** The model explains `r sprintf("%.1f%%", r_squared * 100)` of the total variation in flight times
+- **Assessment:** `r ifelse(r_squared > 0.8, "Excellent fit", ifelse(r_squared > 0.6, "Good fit", ifelse(r_squared > 0.4, "Moderate fit", "Poor fit")))`
+
+**Adjusted R-squared: `r sprintf("%.3f", adj_r_squared)`**
+
+- **Purpose:** Adjusts for the number of parameters, preventing overfitting
+- **Comparison:** Adj-R² is `r ifelse(adj_r_squared < r_squared, "lower than", "equal to")` R², which is `r ifelse(adj_r_squared < r_squared, "expected", "unusual")`
+
+**Residual Standard Error: `r sprintf("%.3f", residual_se)` seconds**
+
+- **Interpretation:** Average prediction error is approximately `r sprintf("%.3f", residual_se)` seconds
+- **Context:** This represents `r sprintf("%.1f%%", (residual_se/mean(helicopter_coded$Time_s))*100)` of the mean flight time
+
+### Factor Effect Analysis
+
+```{r effect_analysis_detailed}
+# Calculate effect magnitudes and practical significance
+effects_data <- anova_tidy %>%
+  filter(!is.na(`p-value`)) %>%
+  arrange(`p-value`) %>%
+  mutate(
+    practical_significance = case_when(
+      `SS%` >= 10 ~ "Large Effect (≥10% of variation)",
+      `SS%` >= 5 ~ "Moderate Effect (5-10% of variation)", 
+      `SS%` >= 1 ~ "Small Effect (1-5% of variation)",
+      TRUE ~ "Negligible Effect (<1% of variation)"
+    ),
+    statistical_significance = case_when(
+      `p-value` < 0.001 ~ "Highly Significant (p < 0.001)",
+      `p-value` < 0.01 ~ "Very Significant (p < 0.01)",
+      `p-value` < 0.05 ~ "Significant (p < 0.05)",
+      `p-value` < 0.1 ~ "Marginally Significant (p < 0.1)",
+      TRUE ~ "Not Significant (p ≥ 0.1)"
+    )
+  )
+
+effects_data %>%
+  dplyr::select(Source, `SS%`, `p-value`, practical_significance, statistical_significance) %>%
+  gt() %>%
+  tab_header(title = md("**Factor Effects: Statistical and Practical Significance**")) %>%
+  cols_label(
+    Source = "Effect",
+    `SS%` = "% Variation Explained", 
+    `p-value` = "p-value",
+    practical_significance = "Practical Significance",
+    statistical_significance = "Statistical Significance"
+  ) %>%
+  fmt_number(columns = c(`p-value`), decimals = 4) %>%
+  fmt_number(columns = c(`SS%`), decimals = 1) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  )
+```
+
+## Key Findings from ANOVA
+
+### Significant Main Effects
+
+```{r main_effects_results, echo=FALSE}
+significant_main <- effects_data %>%
+  filter(str_detect(Source, "^[ABC]:"), `p-value` < 0.05) %>%
+  arrange(`p-value`)
+```
+
+`r if(nrow(significant_main) > 0) {"The following main effects are statistically significant:"} else {"**No main effects are statistically significant at α = 0.05 level.**"}`
+
+```{r main_effects_display, echo=FALSE, results='asis'}
+if(nrow(significant_main) > 0) {
+  for(i in 1:nrow(significant_main)) {
+    effect <- significant_main[i,]
+    cat("**", effect$Source, "**\n\n")
+    cat("- Explains", effect$`SS%`, "% of total variation\n")  
+    cat("- Statistical significance:", effect$statistical_significance, "\n")
+    cat("- Practical significance:", effect$practical_significance, "\n\n")
+  }
+}
+```
+
+### Significant Interaction Effects
+
+```{r interaction_effects_results, echo=FALSE}
+significant_interactions <- effects_data %>%
+  filter(str_detect(Source, "×"), `p-value` < 0.05) %>%
+  arrange(`p-value`)
+```
+
+`r if(nrow(significant_interactions) > 0) {"The following interaction effects are statistically significant:"} else {"**No interaction effects are statistically significant at α = 0.05 level.**"}`
+
+```{r interaction_effects_display, echo=FALSE, results='asis'}
+if(nrow(significant_interactions) > 0) {
+  for(i in 1:nrow(significant_interactions)) {
+    effect <- significant_interactions[i,]
+    cat("**", effect$Source, "**\n\n")
+    cat("- Explains", effect$`SS%`, "% of total variation\n")
+    cat("- Statistical significance:", effect$statistical_significance, "\n") 
+    cat("- **Interpretation:** The effect of one factor depends on the level of the other factor(s)\n")
+    cat("- **Implication:** Simple main effects analysis may be needed\n\n")
+  }
+} else {
+  cat("This means factors act independently - their effects are additive.\n\n")
+}
+```
+
+### ANOVA Assumptions Assessment
+
+```{r assumption_tests, echo=FALSE}
+shapiro_result <- shapiro.test(residuals(model_full))
+levene_result <- leveneTest(Time_s ~ interaction(Length_Factor, Width_Factor, Clip_Factor), 
+                           data = helicopter_coded)
+levene_p <- levene_result$`Pr(>F)`[1]
+overall_validity <- shapiro_result$p.value > 0.05 & levene_p > 0.05
+```
+
+ANOVA requires three key assumptions:
+
+**1. Independence of Observations**
+- **Status:** **MET** 
+- **Evidence:** Randomized run order prevents systematic bias
+- **Conclusion:** Each helicopter was tested independently
+
+**2. Normality of Residuals**
+- **Test:** Shapiro-Wilk test
+- **p-value:** `r sprintf("%.4f", shapiro_result$p.value)`
+- **Status:** `r ifelse(shapiro_result$p.value > 0.05, "**PASSED**", "**FAILED**")` (`r ifelse(shapiro_result$p.value > 0.05, "p > 0.05", "p ≤ 0.05")`)
+- **Conclusion:** `r ifelse(shapiro_result$p.value > 0.05, "Residuals are approximately normal", "Some departure from normality detected")`
+
+**3. Homogeneity of Variance (Equal Variances)**
+- **Test:** Levene's test  
+- **p-value:** `r sprintf("%.4f", levene_p)`
+- **Status:** `r ifelse(levene_p > 0.05, "**PASSED**", " **FAILED**")` (`r ifelse(levene_p > 0.05, "p > 0.05", "p ≤ 0.05")`)
+- **Conclusion:** `r ifelse(levene_p > 0.05, "Variances are approximately equal across treatments", "Some evidence of unequal variances")`
+
+**Overall ANOVA Validity: `r ifelse(overall_validity, "**GOOD**", "**CAUTION ADVISED**")`**
+
+`r if(!overall_validity) {"Consider robust alternatives or data transformations if assumption violations are severe."}`
+
+# Stepwise Model Selection
+
+## Understanding Model Selection in DOE
+
+After fitting the full factorial model, we often find that not all effects are statistically significant. **Model selection** helps us identify a simpler, more interpretable model that retains only the important effects. This process serves several purposes:
+
+1. **Parsimony**: Simpler models are easier to interpret and communicate
+2. **Improved Precision**: Removing non-significant terms can improve the precision of remaining effect estimates
+3. **Better Predictions**: Simpler models often predict better on new data (avoid overfitting)
+4. **Focus on Key Factors**: Identifies which factors truly matter for the response
+
+## Model Selection Strategies
+
+There are several approaches to model selection:
+
+- **Forward Selection**: Start with no terms, add significant ones
+- **Backward Elimination**: Start with all terms, remove non-significant ones  
+- **Stepwise (Both Directions)**: Combines forward and backward at each step
+- **All Subsets**: Evaluate all possible model combinations
+
+We'll demonstrate both **automated stepwise selection** using statistical criteria and **manual backward elimination** using p-values.
+
+## Automated Stepwise Selection Using AIC
+
+The **Akaike Information Criterion (AIC)** balances model fit with model complexity. Lower AIC values indicate better models.
+
+**AIC Formula**: AIC = -2 × log(likelihood) + 2 × (number of parameters)
+
+```{r stepwise_setup, echo=FALSE}
+# Load MASS library for stepAIC
+library(MASS)
+
+# Get initial model info
+initial_aic <- AIC(model_full)
+initial_terms <- length(coef(model_full))
+```
+
+### Starting Model Information
+
+**Full Factorial Model:**
+- Formula: `r deparse(formula(model_full))`
+- Number of terms: `r initial_terms`
+- Initial AIC: `r round(initial_aic, 2)`
+
+```{r stepwise_aic_process}
+# Perform stepwise selection (suppress output for clean presentation)
+step_result <- stepAIC(model_full, direction = "both", trace = FALSE)
+```
+
+```{r stepwise_results, echo=FALSE}
+final_aic <- AIC(step_result)
+final_terms <- length(coef(step_result))
+aic_improvement <- initial_aic - final_aic
+```
+
+### Stepwise Selection Results
+
+**Selected Model:**
+- Formula: `r deparse(formula(step_result))`
+- Number of terms: `r final_terms`
+- Final AIC: `r round(final_aic, 2)`
+- AIC improvement: `r round(aic_improvement, 2)`
+
+**Interpretation of AIC Selection:**
+The stepwise algorithm evaluated adding and removing terms at each step, selecting the combination that minimized AIC. `r ifelse(aic_improvement > 2, "The substantial AIC improvement indicates the selected model provides a better balance of fit and complexity.", ifelse(aic_improvement > 0, "The modest AIC improvement suggests some benefit to model simplification.", "The minimal AIC change indicates the full model was already well-balanced."))`
+
+```{r stepwise_model_summary}
+# Summary of selected model
+summary(step_result)
+```
+
+```{r model_comparison_table}
+# Compare model fit statistics
+model_comparison <- data.frame(
+  Model = c("Full Factorial", "Stepwise Selected"),
+  Terms = c(length(coef(model_full)), length(coef(step_result))),
+  R_squared = c(summary(model_full)$r.squared, summary(step_result)$r.squared),
+  Adj_R_squared = c(summary(model_full)$adj.r.squared, summary(step_result)$adj.r.squared),
+  AIC = c(AIC(model_full), AIC(step_result)),
+  Residual_SE = c(summary(model_full)$sigma, summary(step_result)$sigma),
+  stringsAsFactors = FALSE
+)
+
+model_comparison %>%
+  mutate(across(where(is.numeric), ~round(.x, 4))) %>%
+  gt() %>%
+  tab_header(title = md("**Model Comparison: Full vs. Stepwise Selected**")) %>%
+  cols_label(
+    Model = "Model Type",
+    Terms = "Number of Terms",
+    R_squared = "R²",
+    Adj_R_squared = "Adj R²", 
+    AIC = "AIC",
+    Residual_SE = "Residual SE"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  )
+```
+
+## Manual Backward Elimination Using p-values
+
+While AIC provides an objective criterion, many practitioners prefer **p-value based elimination** for its interpretability. This approach removes the least significant term at each step.
+
+**Elimination Process:**
+1. Start with the full model
+2. Identify the term with the highest p-value > 0.05
+3. Remove that term and refit the model
+4. Repeat until all remaining terms have p ≤ 0.05
+
+```{r manual_elimination_process, echo=FALSE}
+# Initialize tracking
+elimination_steps <- data.frame(
+  Step = integer(),
+  Removed_Term = character(),
+  p_value = double(),
+  F_test_p = double(),
+  Remaining_Terms = integer(),
+  stringsAsFactors = FALSE
+)
+
+current_model <- model_full
+step_number <- 0
+
+# Perform elimination
+repeat {
+  current_summary <- summary(current_model)
+  coef_table <- as.data.frame(coef(current_summary))
+  
+  if (nrow(coef_table) <= 1) break
+  
+  # Extract p-values excluding intercept
+  p_values <- coef_table[-1, 4]  # 4th column is p-values, exclude first row (intercept)
+  names(p_values) <- rownames(coef_table)[-1]
+  
+  if (length(p_values) == 0) break
+  
+  max_p <- max(p_values, na.rm = TRUE)
+  
+  if (is.na(max_p) || max_p <= 0.05) break
+  
+  term_to_remove <- names(which.max(p_values))
+  step_number <- step_number + 1
+  
+  new_formula <- update(formula(current_model), paste(". ~ . -", term_to_remove))
+  new_model <- lm(new_formula, data = helicopter_coded)
+  
+  # F-test for removal
+  anova_comparison <- anova(new_model, current_model)
+  f_test_p <- anova_comparison$`Pr(>F)`[2]
+  
+  elimination_steps <- rbind(elimination_steps, data.frame(
+    Step = step_number,
+    Removed_Term = term_to_remove,
+    p_value = max_p,
+    F_test_p = f_test_p,
+    Remaining_Terms = length(coef(new_model)) - 1,
+    stringsAsFactors = FALSE
+  ))
+  
+  current_model <- new_model
+}
+
+# Store final manual model
+final_manual_model <- current_model
+```
+
+### Manual Elimination Results
+
+```{r elimination_summary}
+if(nrow(elimination_steps) > 0) {
+  elimination_steps %>%
+    mutate(
+      Elimination_Reason = paste("p-value =", sprintf("%.4f", p_value), "> 0.05"),
+      F_test_Result = ifelse(F_test_p > 0.05, "Safe removal", "Marginal significance")
+    ) %>%
+    dplyr::select(Step, Removed_Term, p_value, F_test_p, F_test_Result, Remaining_Terms) %>%
+    gt() %>%
+    tab_header(title = md("**Manual Backward Elimination Steps**")) %>%
+    cols_label(
+      Step = "Step",
+      Removed_Term = "Removed Term",
+      p_value = "Original p-value",
+      F_test_p = "F-test p-value", 
+      F_test_Result = "Removal Assessment",
+      Remaining_Terms = "Terms Remaining"
+    ) %>%
+    fmt_number(columns = c("p_value", "F_test_p"), decimals = 4) %>%
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    )
+} else {
+  # Create a note when no elimination occurred
+  no_elimination <- data.frame(
+    Result = "No terms eliminated",
+    Reason = "All terms significant at α = 0.05"
+  )
+  
+  no_elimination %>%
+    gt() %>%
+    tab_header(title = md("**Manual Elimination Result**"))
+}
+```
+
+`r if(nrow(elimination_steps) > 0) {"### Final Manual Model"} else {"### Manual Model Conclusion"}`
+
+`r if(nrow(elimination_steps) > 0) {"The manual backward elimination process removed"} else {"The manual elimination process found that all terms in the full model were significant, so no simplification was performed."}`
+`r if(nrow(elimination_steps) > 0) {paste(nrow(elimination_steps), "terms, resulting in a model with", length(coef(final_manual_model)) - 1, "remaining terms.")}`
+
+```{r final_manual_summary}
+if(nrow(elimination_steps) > 0) {
+  summary(final_manual_model)
+}
+```
+
+## Model Selection Comparison
+
+```{r final_comparison}
+# Create comprehensive comparison
+if(nrow(elimination_steps) > 0) {
+  comparison_data <- data.frame(
+    Method = c("Full Factorial", "AIC Stepwise", "p-value Backward"),
+    Formula = c(
+      paste(deparse(formula(model_full)), collapse = " "),
+      paste(deparse(formula(step_result)), collapse = " "), 
+      paste(deparse(formula(final_manual_model)), collapse = " ")
+    ),
+    Terms = c(
+      length(coef(model_full)),
+      length(coef(step_result)),
+      length(coef(final_manual_model))
+    ),
+    R_squared = c(
+      summary(model_full)$r.squared,
+      summary(step_result)$r.squared,
+      summary(final_manual_model)$r.squared
+    ),
+    Adj_R_squared = c(
+      summary(model_full)$adj.r.squared,
+      summary(step_result)$adj.r.squared,
+      summary(final_manual_model)$adj.r.squared
+    ),
+    AIC = c(
+      AIC(model_full),
+      AIC(step_result),
+      AIC(final_manual_model)
+    ),
+    stringsAsFactors = FALSE
+  )
+} else {
+  comparison_data <- data.frame(
+    Method = c("Full Factorial", "AIC Stepwise"),
+    Formula = c(
+      paste(deparse(formula(model_full)), collapse = " "),
+      paste(deparse(formula(step_result)), collapse = " ")
+    ),
+    Terms = c(
+      length(coef(model_full)),
+      length(coef(step_result))
+    ),
+    R_squared = c(
+      summary(model_full)$r.squared,
+      summary(step_result)$r.squared
+    ),
+    Adj_R_squared = c(
+      summary(model_full)$adj.r.squared,
+      summary(step_result)$adj.r.squared
+    ),
+    AIC = c(
+      AIC(model_full),
+      AIC(step_result)
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+comparison_data %>%
+  mutate(across(where(is.numeric), ~round(.x, 4))) %>%
+  gt() %>%
+  tab_header(title = md("**Model Selection Methods Comparison**")) %>%
+  cols_label(
+    Method = "Selection Method",
+    Formula = "Model Formula",
+    Terms = "Number of Terms",
+    R_squared = "R²",
+    Adj_R_squared = "Adjusted R²",
+    AIC = "AIC"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  )
+```
+
+```{r best_model_selection, echo=FALSE}
+best_aic_row <- which.min(comparison_data$AIC)
+best_model_name <- comparison_data$Method[best_aic_row]
+recommended_model <- switch(best_model_name,
+  "AIC Stepwise" = step_result,
+  "p-value Backward" = final_manual_model,
+  "Full Factorial" = model_full
+)
+```
+
+## Model Selection Conclusions
+
+**Recommended Model:** `r best_model_name`
+
+**Final Model Formula:** `r deparse(formula(recommended_model))`
+
+**Selection Rationale:**
+
+- **Statistical Optimality:** This model achieved the lowest AIC value (`r round(min(comparison_data$AIC), 2)`), indicating the best balance between model fit and complexity
+- **Adjusted R-squared:** `r sprintf("%.3f", summary(recommended_model)$adj.r.squared)` - retains `r sprintf("%.1f%%", summary(recommended_model)$adj.r.squared * 100)` of explainable variation
+- **Parsimony:** Uses `r length(coef(recommended_model)) - 1` terms compared to `r length(coef(model_full)) - 1` in the full model
+- **Interpretability:** Includes only statistically meaningful effects, making results easier to understand and communicate
+
+This recommended model will be used for final effect interpretation and optimization analysis in subsequent sections.
+
+# Results and Interpretation
+
+## Statistical Analysis Summary
+
+This section synthesizes the key findings from our comprehensive DOE analysis, translating statistical results into practical engineering insights for paper helicopter optimization.
+
+```{r effects_calculation, echo=FALSE}
+# Calculate effects using the standard DOE approach
+treatment_means <- helicopter_coded %>%
+  group_by(A_Length, B_Width, C_Clip, Treatment) %>%
+  summarise(mean_response = mean(Time_s), .groups = 'drop') %>%
+  arrange(A_Length, B_Width, C_Clip)
+
+# Extract the 8 treatment combination means in standard order
+y <- treatment_means$mean_response
+names(y) <- treatment_means$Treatment
+
+# Calculate main effects (contrast: high level - low level / 4)
+n_reps <- 3
+A_effect <- (sum(y[c("a", "ab", "ac", "abc")]) - sum(y[c("(1)", "b", "c", "bc")])) / 4
+B_effect <- (sum(y[c("b", "ab", "bc", "abc")]) - sum(y[c("(1)", "a", "c", "ac")])) / 4  
+C_effect <- (sum(y[c("c", "ac", "bc", "abc")]) - sum(y[c("(1)", "a", "b", "ab")])) / 4
+
+# Two-factor interactions
+AB_effect <- (sum(y[c("ab", "abc")]) + sum(y[c("(1)", "c")]) - sum(y[c("a", "ac")]) - sum(y[c("b", "bc")])) / 4
+AC_effect <- (sum(y[c("ac", "abc")]) + sum(y[c("(1)", "b")]) - sum(y[c("a", "ab")]) - sum(y[c("c", "bc")])) / 4
+BC_effect <- (sum(y[c("bc", "abc")]) + sum(y[c("(1)", "a")]) - sum(y[c("b", "ab")]) - sum(y[c("c", "ac")])) / 4
+
+# Three-factor interaction
+ABC_effect <- (sum(y[c("abc", "(1)", "ab", "c")]) - sum(y[c("a", "b", "ac", "bc")])) / 4
+
+# Standard errors for effects
+mse <- sum((helicopter_coded$Time_s - ave(helicopter_coded$Time_s, helicopter_coded$Treatment))^2) / (24 - 8)
+se_effect <- sqrt(mse / (4 * n_reps))
+
+# Create effects summary
+effects_summary <- tibble(
+  Effect = c("A (Length)", "B (Width)", "C (Clip)", "AB", "AC", "BC", "ABC"),
+  Estimate = c(A_effect, B_effect, C_effect, AB_effect, AC_effect, BC_effect, ABC_effect),
+  SE = rep(se_effect, 7),
+  t_stat = c(A_effect, B_effect, C_effect, AB_effect, AC_effect, BC_effect, ABC_effect) / se_effect,
+  Abs_Effect = abs(c(A_effect, B_effect, C_effect, AB_effect, AC_effect, BC_effect, ABC_effect))
+) %>%
+  arrange(desc(Abs_Effect)) %>%
+  mutate(across(where(is.numeric), ~round(.x, 4)))
+```
+
+### Effect Magnitudes and Rankings
+
+```{r effects_table}
+effects_summary %>%
+  gt() %>%
+  tab_header(title = md("**Factorial Effects Ranked by Magnitude**")) %>%
+  cols_label(
+    Effect = "Effect",
+    Estimate = "Effect Size (s)",
+    SE = "Standard Error",
+    t_stat = "t-statistic", 
+    Abs_Effect = "Absolute Effect"
+  ) %>%
+  tab_footnote(
+    footnote = "Positive effects indicate higher flight times at high factor levels",
+    locations = cells_column_labels("Estimate")
+  ) %>%
+  fmt_number(columns = everything() & where(is.numeric), decimals = 3) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  # Highlight the largest effects
+  tab_style(
+    style = cell_fill(color = "lightblue", alpha = 0.3),
+    locations = cells_body(rows = 1:3)
+  )
+```
+
+## Significant Effects Analysis
+
+```{r significant_effects_data, echo=FALSE}
+# Get significant effects from ANOVA (reusing previous analysis)
+significant_effects <- anova_tidy %>%
+  filter(!is.na(`p-value`), `p-value` < 0.05, Source != "Error") %>%
+  arrange(`p-value`)
+
+# Find largest main effects for interpretation
+largest_main <- effects_summary %>%
+  filter(str_detect(Effect, "^[ABC]")) %>%
+  slice_max(Abs_Effect, n = 1)
+
+largest_interaction <- effects_summary %>%
+  filter(str_detect(Effect, "×|AB|AC|BC|ABC")) %>%
+  slice_max(Abs_Effect, n = 1)
+```
+
+### Statistical Significance Findings
+
+`r if(nrow(significant_effects) > 0) {paste("Our ANOVA analysis identified", nrow(significant_effects), "statistically significant effects at the α = 0.05 level:")} else {"No effects were found to be statistically significant at the α = 0.05 level."}`
+
+```{r significant_effects_table}
+if(nrow(significant_effects) > 0) {
+  significant_effects %>%
+    dplyr::select(Source, `SS%`, `F-value`, `p-value`) %>%
+    gt() %>%
+    tab_header(title = md("**Statistically Significant Effects**")) %>%
+    cols_label(
+      Source = "Effect",
+      `SS%` = "% Total Variation",
+      `F-value` = "F-statistic",
+      `p-value` = "p-value"
+    ) %>%
+    fmt_number(columns = c(`F-value`), decimals = 2) %>%
+    fmt_number(columns = c(`p-value`), decimals = 4) %>%
+    fmt_number(columns = c(`SS%`), decimals = 1) %>%
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    )
+}
+```
+
+### Engineering Interpretation of Main Effects
+
+**Factor A - Rotor Length:** `r sprintf("%+.3f", A_effect)` seconds
+
+`r if(abs(A_effect) > 0.1) {paste("This", ifelse(A_effect > 0, "positive", "negative"), "effect indicates that", ifelse(A_effect > 0, "longer rotors (8.5 cm) increase flight time by approximately", "shorter rotors (7.5 cm) increase flight time by approximately"), round(abs(A_effect), 3), "seconds compared to", ifelse(A_effect > 0, "shorter rotors", "longer rotors"), "on average.")} else {"This small effect suggests rotor length has minimal impact on flight time within the tested range."}`
+
+**Factor B - Rotor Width:** `r sprintf("%+.3f", B_effect)` seconds
+
+`r if(abs(B_effect) > 0.1) {paste("This", ifelse(B_effect > 0, "positive", "negative"), "effect shows that", ifelse(B_effect > 0, "wider rotors (5.0 cm) increase flight time by approximately", "narrower rotors (3.5 cm) increase flight time by approximately"), round(abs(B_effect), 3), "seconds compared to", ifelse(B_effect > 0, "narrower rotors", "wider rotors"), "on average.")} else {"This small effect suggests rotor width has minimal impact on flight time within the tested range."}`
+
+**Factor C - Paper Clips:** `r sprintf("%+.3f", C_effect)` seconds
+
+`r if(abs(C_effect) > 0.1) {paste("This", ifelse(C_effect > 0, "positive", "negative"), "effect demonstrates that", ifelse(C_effect > 0, "adding paper clips increases flight time by approximately", "removing paper clips increases flight time by approximately"), round(abs(C_effect), 3), "seconds compared to the", ifelse(C_effect > 0, "no-clip", "two-clip"), "condition.")} else {"This small effect suggests paper clip mass has minimal impact on flight time."}`
+
+### Physical Mechanisms and Design Insights
+
+**Aerodynamic Considerations:**
+
+The observed effects can be understood through fundamental aerodynamic principles:
+
+1. **Lift Generation**: `r if(max(abs(A_effect), abs(B_effect)) > 0.1) {"Rotor dimensions directly affect the lift-generating surface area, with larger rotors potentially creating more lift but also more drag."} else {"Within the tested range, rotor size changes had minimal impact on lift-drag balance."}`
+
+2. **Stability and Control**: `r if(abs(C_effect) > 0.1) {paste("The paper clip effect primarily influences helicopter stability and descent rate.", ifelse(C_effect > 0, "Added mass appears to stabilize descent, potentially reducing wobbling and extending flight time.", "The no-clip configuration appears more favorable, possibly due to reduced overall weight."))} else {"Weight variations had minimal impact on flight dynamics within the tested range."}`
+
+3. **Interaction Effects**: `r if(nrow(significant_interactions) > 0) {"Significant interactions indicate that optimal design requires considering factor combinations rather than individual factors in isolation."} else {"The absence of significant interactions suggests factors act independently, simplifying design optimization."}`
+
+## Optimal Configuration Analysis
+
+```{r optimal_settings, echo=FALSE}
+# Find optimal settings for maximum and minimum flight time
+optimal_max <- treatment_means %>%
+  filter(mean_response == max(mean_response))
+
+optimal_min <- treatment_means %>%
+  filter(mean_response == min(mean_response))
+
+# Calculate performance difference
+performance_range <- max(treatment_means$mean_response) - min(treatment_means$mean_response)
+```
+
+### Maximum Flight Time Configuration
+
+**Optimal Treatment:** `r optimal_max$Treatment`
+
+**Design Specifications:**
+- **Rotor Length:** `r ifelse(optimal_max$A_Length == 1, "8.5 cm (Long)", "7.5 cm (Short)")`
+- **Rotor Width:** `r ifelse(optimal_max$B_Width == 1, "5.0 cm (Wide)", "3.5 cm (Narrow)")`  
+- **Paper Clips:** `r ifelse(optimal_max$C_Clip == 1, "2 clips attached", "No clips")`
+- **Average Flight Time:** `r round(optimal_max$mean_response, 3)` seconds
+
+### Minimum Flight Time Configuration
+
+**Treatment:** `r optimal_min$Treatment`
+
+**Design Specifications:**
+- **Rotor Length:** `r ifelse(optimal_min$A_Length == 1, "8.5 cm (Long)", "7.5 cm (Short)")`
+- **Rotor Width:** `r ifelse(optimal_min$B_Width == 1, "5.0 cm (Wide)", "3.5 cm (Narrow)")`
+- **Paper Clips:** `r ifelse(optimal_min$C_Clip == 1, "2 clips attached", "No clips")`
+- **Average Flight Time:** `r round(optimal_min$mean_response, 3)` seconds
+
+### Performance Range Analysis
+
+**Total Performance Range:** `r round(performance_range, 3)` seconds
+
+This represents a `r round((performance_range/min(treatment_means$mean_response))*100, 1)`% difference between the best and worst configurations, demonstrating that design choices significantly impact helicopter performance.
+
+```{r treatment_ranking}
+# Display all treatment combinations ranked by performance
+treatment_means %>%
+  mutate(
+    Length_Level = ifelse(A_Length == -1, "Short (7.5cm)", "Long (8.5cm)"),
+    Width_Level = ifelse(B_Width == -1, "Narrow (3.5cm)", "Wide (5.0cm)"), 
+    Clip_Level = ifelse(C_Clip == -1, "No Clips", "2 Clips"),
+    Rank = rank(-mean_response)
+  ) %>%
+  arrange(Rank) %>%
+  dplyr::select(Rank, Treatment, Length_Level, Width_Level, Clip_Level, mean_response) %>%
+  gt() %>%
+  tab_header(title = md("**Treatment Performance Ranking**")) %>%
+  cols_label(
+    Rank = "Rank",
+    Treatment = "Treatment Code",
+    Length_Level = "Rotor Length",
+    Width_Level = "Rotor Width",
+    Clip_Level = "Paper Clips",
+    mean_response = "Mean Flight Time (s)"
+  ) %>%
+  fmt_number(columns = c("mean_response"), decimals = 3) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  # Highlight best and worst configurations
+  tab_style(
+    style = cell_fill(color = "lightgreen", alpha = 0.4),
+    locations = cells_body(rows = 1)
+  ) %>%
+  tab_style(
+    style = cell_fill(color = "lightcoral", alpha = 0.4),
+    locations = cells_body(rows = 8)
+  )
+```
+
+## Design Recommendations
+
+### For Maximum Flight Time Applications
+
+**Primary Recommendation:** Use treatment `r optimal_max$Treatment` configuration
+- This design maximizes flight duration for applications requiring extended airtime
+- The combination provides optimal balance of lift generation and flight stability
+
+### For Minimum Flight Time Applications  
+
+**Alternative Configuration:** Treatment `r optimal_min$Treatment` may be preferred when:
+- Rapid descent is desired
+- Minimal flight time is the objective
+- Compact flight patterns are required
+
+### Practical Implementation Guidelines
+
+1. **Manufacturing Tolerances**: Maintain rotor dimensions within ±0.5mm for consistent performance
+2. **Paper Clip Consistency**: Use standard paper clips with consistent mass (typically ~0.5g each)
+3. **Release Technique**: Ensure consistent release height and method for reproducible results
+4. **Environmental Factors**: Consider air currents and temperature effects in practical applications
+
+The systematic DOE approach has successfully identified the key factors controlling paper helicopter flight performance and provided clear optimization guidance for different application requirements.
