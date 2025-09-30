@@ -209,11 +209,10 @@ The trade-off between comprehensive information and experimental efficiency repr
 
 1. **Paper substrate**: Standard A4 office paper (80 g/m², 210 × 297 mm)
    - Thickness: 0.1 mm (±0.01 mm)
-   - Storage conditions: 20°C, 50% relative humidity for 24 hours prior to testing
 
 2. **Paper clips**: Standard steel paper clips
    - Dimensions: 50 mm length × 10 mm width
-   - Mass: 0.50 g (±0.02 g) per clip, verified using analytical balance
+   - Mass: 0.50 g (±0.02 g) per clip
    - Material: Galvanized steel wire, 1.2 mm diameter
 
 3. **Cutting tools**:
@@ -226,7 +225,6 @@ The trade-off between comprehensive information and experimental efficiency repr
 **Primary measurement device**: Stopwatch
 - Resolution: 0.01 seconds
 - Accuracy: ±0.02 seconds over 10-second intervals
-- Calibration: Verified against laboratory-grade timer before experiments
 
 ![Hanhart stopwatch used for timing helicopter flight duration](stopwatch.png){#fig-stopwatch width=40%}
 
@@ -234,12 +232,14 @@ The trade-off between comprehensive information and experimental efficiency repr
 
 ### Release System
 
-**Drop height**: 2.00 m (±0.02 m)
+**Drop height**: 2.00 m (±0.02 m):
+
 - Measured from helicopter center of mass to floor level
-- Verified using laser distance meter
-- Release point marked on laboratory wall for consistency
+- Verified using scale which is 82.5 cm
+- Release point marked on wall for consistency
 
 **Release mechanism**:
+
 - Operator holds helicopter by the base (non-rotor section)
 - Helicopter oriented vertically with rotors horizontal
 - Release performed by simultaneous opening of thumb and forefinger
@@ -250,7 +250,6 @@ The trade-off between comprehensive information and experimental efficiency repr
 - Air conditioning off during experiments to minimize air currents
 - Room temperature: 22°C (±2°C)
 - Relative humidity: 45-55%
-- Barometric pressure recorded for each experimental session
 
 ### Flight Termination Criteria
 
@@ -273,10 +272,10 @@ The trade-off between comprehensive information and experimental efficiency repr
 2. **Cutting sequence**:
    - Cut along solid lines using craft knife and steel ruler
    - Maintain consistent pressure for clean edges
-   - Verify rotor dimensions with calipers after cutting
+   - Verify rotor dimensions with scale after cutting
 
 3. **Folding procedure**:
-   - Fold rotors along designated lines to create 90° angles
+   - Fold rotors along designated lines to create angles
    - Ensure rotors are mirror images (one left, one right)
    - Fold body sections as indicated to create base structure
 
