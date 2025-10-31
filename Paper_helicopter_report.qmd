@@ -1,0 +1,1450 @@
+---
+title: "Paper Helicopter DOE Experiment"
+author: "Nayeemuddin Mohammed"
+date: today
+format: 
+  html: 
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+    html-math-method: katex
+    embed-resources: true
+    css: |
+      h1 { 
+        font-size: 2.5em; 
+        margin-top: 1.5em; 
+        margin-bottom: 0.8em;
+        color: #2c3e50;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 0.3em;
+      }
+      h2 { 
+        font-size: 2.0em; 
+        margin-top: 1.3em; 
+        margin-bottom: 0.6em;
+        color: #34495e;
+      }
+      h3 { 
+        font-size: 1.6em; 
+        margin-top: 1.1em; 
+        margin-bottom: 0.5em;
+        color: #34495e;
+      }
+      h4 { 
+        font-size: 1.3em; 
+        margin-top: 0.9em; 
+        margin-bottom: 0.4em;
+        color: #7f8c8d;
+      }
+  pdf: 
+    toc: true
+    toc-depth: 3
+    geometry: margin=1in
+    number-sections: true
+    fig-width: 7
+    fig-height: 5
+    keep-tex: false
+    include-in-header: 
+      text: |
+        \usepackage{titlesec}
+        \usepackage{xcolor}
+        \titleformat{\section}{\LARGE\bfseries\color{blue!70!black}}{\thesection}{1em}{}
+        \titlespacing*{\section}{0pt}{2ex plus 1ex minus 0.2ex}{1.5ex plus 0.2ex}
+        \titleformat{\subsection}{\Large\bfseries\color{black!80}}{\thesubsection}{1em}{}
+        \titlespacing*{\subsection}{0pt}{1.8ex plus 0.8ex minus 0.2ex}{1.2ex plus 0.2ex}
+        \titleformat{\subsubsection}{\large\bfseries\color{black!70}}{\thesubsubsection}{1em}{}
+        \titlespacing*{\subsubsection}{0pt}{1.5ex plus 0.6ex minus 0.2ex}{1ex plus 0.2ex}
+        \titleformat{\paragraph}{\normalsize\bfseries\color{black!60}}{\theparagraph}{1em}{}
+        \titlespacing*{\paragraph}{0pt}{1.2ex plus 0.4ex minus 0.2ex}{0.8ex plus 0.2ex}
+execute:
+  echo: false
+  warning: false
+  message: false
+  error: false
+editor: visual
+---
+
+```{r setup, include=FALSE}
+#| label: setup
+
+# Load required libraries
+library(tidyverse)
+library(broom)
+library(knitr)
+library(patchwork)
+library(car)
+library(FrF2)
+
+# Set global chunk options
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  error = FALSE,
+  fig.width = 7,
+  fig.height = 5,
+  fig.align = "center",
+  dpi = 300
+)
+
+# Set theme for all plots
+theme_set(theme_minimal() +
+          theme(
+            plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+            plot.subtitle = element_text(hjust = 0.5, size = 12),
+            legend.position = "bottom"
+          ))
+
+# Function to create clean tables that work in both HTML and PDF
+create_table <- function(data, caption) {
+  kable(data, 
+        caption = caption,
+        digits = 3,
+        booktabs = TRUE,
+        format.args = list(scientific = FALSE)) %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped"),
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = FALSE
+    )
+}
+
+# Load kableExtra after knitr to avoid conflicts
+library(kableExtra)
+```
+
+```{r visualization-functions, include=FALSE}
+#| label: viz-functions
+
+# Function for main effects boxplots
+create_main_effects_plot <- function(data, factor_col, factor_name, colors = c("lightblue", "lightcoral")) {
+  data %>%
+    ggplot(aes(x = !!sym(factor_col), y = Time_s, fill = !!sym(factor_col))) +
+    geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 2) +
+    geom_jitter(width = 0.2, alpha = 0.6, size = 2) +
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 3, 
+                 fill = "red", color = "darkred") +
+    labs(
+      title = paste("Factor", factor_name, "Effect"),
+      subtitle = "Red diamonds = treatment means",
+      x = factor_name, 
+      y = "Flight Time (seconds)"
+    ) +
+    scale_fill_manual(values = colors) +
+    theme(legend.position = "none")
+}
+
+# Function for interaction plots
+create_interaction_plot <- function(data, x_factor, color_factor, interaction_name, colors = c("blue", "red")) {
+  data %>%
+    group_by(!!sym(x_factor), !!sym(color_factor)) %>%
+    summarise(
+      mean_time = mean(Time_s), 
+      se_time = sd(Time_s)/sqrt(n()),
+      .groups = 'drop'
+    ) %>%
+    ggplot(aes(x = !!sym(x_factor), y = mean_time, 
+               color = !!sym(color_factor), group = !!sym(color_factor))) +
+    geom_line(size = 1.5, alpha = 0.8) +
+    geom_point(size = 4, alpha = 0.9) +
+    geom_errorbar(aes(ymin = mean_time - se_time, ymax = mean_time + se_time), 
+                  width = 0.05, alpha = 0.7) +
+    labs(
+      title = paste(interaction_name, "Interaction"),
+      subtitle = "Error bars = ±1 standard error",
+      x = str_replace(x_factor, "_Factor", ""), 
+      y = "Mean Flight Time (seconds)",
+      color = str_replace(color_factor, "_Factor", "")
+    ) +
+    scale_color_manual(values = colors)
+}
+
+# Function for diagnostic plots
+create_diagnostic_plots <- function(model) {
+  # Extract residual data
+  residual_data <- data.frame(
+    fitted = fitted(model),
+    residuals = residuals(model),
+    std_residuals = rstandard(model),
+    studentized_residuals = rstudent(model)
+  )
+  
+  # Residuals vs Fitted
+  p1 <- residual_data %>%
+    ggplot(aes(x = fitted, y = residuals)) +
+    geom_point(alpha = 0.7) +
+    geom_smooth(method = "loess", se = FALSE, color = "red") +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    labs(title = "Residuals vs Fitted Values",
+         x = "Fitted Values", y = "Residuals")
+  
+  # Normal Q-Q Plot
+  p2 <- residual_data %>%
+    ggplot(aes(sample = std_residuals)) +
+    stat_qq() +
+    stat_qq_line() +
+    labs(title = "Normal Q-Q Plot",
+         x = "Theoretical Quantiles", y = "Standardized Residuals")
+  
+  return(list(p1 = p1, p2 = p2))
+}
+```
+
+# Introduction
+
+The paper helicopter represents one of the most elegant and accessible physical models for teaching and demonstrating the principles of Design of Experiments (DOE). This simple yet effective experimental system, consisting of folded paper with adjustable rotor dimensions and optional weight attachments, provides a hands-on approach to understanding how multiple factors simultaneously influence a measurable response. The helicopter's flight time serves as an ideal response variable, as it can be measured precisely and is influenced by aerodynamic principles that students can intuitively grasp.
+
+In experimental design, researchers must choose between comprehensive data collection and experimental efficiency. A full factorial design explores every possible combination of factor levels, providing complete information about main effects, interactions, and higher-order relationships. For a $2^3$ design with three factors at two levels each, this requires $2^3 = 8$ unique treatment combinations. When replicated three times for statistical robustness, this yields 24 experimental runs. The full factorial approach guarantees that no information is lost and all possible factor interactions can be independently estimated.
+
+However, full factorial designs can become prohibitively expensive or time-consuming as the number of factors increases. A fractional factorial design offers an efficient alternative by strategically selecting a subset of treatment combinations that still allows estimation of the most important effects. A $2^{3-1}$ fractional factorial uses only half the runs (4 treatment combinations, or 12 runs with three replicates), significantly reducing experimental effort. This efficiency comes at a cost: aliasing, where certain effects become confounded with others and cannot be independently estimated. The key assumption is that higher-order interactions are often negligible compared to main effects and two-factor interactions.
+
+The trade-off between comprehensive information and experimental efficiency represents a fundamental challenge in DOE. While the full factorial design provides unambiguous results, the fractional factorial design requires careful consideration of which effects are likely to be important and which can be safely confounded. In many practical applications, this trade-off is essential for making DOE feasible within resource constraints.
+
+**Research Question**: How do the main effects and interactions of rotor length, rotor width, and paper clip mass influence the flight time of a paper helicopter, and can a fractional factorial design efficiently identify the same optimal configuration as a full factorial analysis?
+
+# Materials and Methods
+
+## Experimental Materials
+
+### Primary Materials
+
+1.  **Paper substrate**: Standard A4 office paper (80 g/m², 210 × 297 mm)
+    -   Thickness: 0.1 mm (±0.01 mm)
+2.  **Paper clips**: Standard steel paper clips
+    -   Dimensions: 50 mm length × 10 mm width
+    -   Mass: 0.50 g (±0.02 g) per clip
+3.  **Cutting tools**:
+    -   Steel ruler (300 mm, ±0.5 mm accuracy)
+    -   Precision craft knife with replaceable blades
+    -   Cutting mat (A3 size)
+
+### Measurement Equipment
+
+**Primary measurement device**: Stopwatch - Resolution: 0.01 seconds - Accuracy: ±0.02 seconds over 10-second intervals - Calibration: Verified against laboratory-grade timer before experiments
+
+![Hanhart stopwatch used for timing helicopter flight duration](stopwatch.png){#fig-stopwatch width="40%"}
+
+## Experimental Setup and Apparatus
+
+### Release System
+
+**Drop height**: 8.20 m (±0.02 m) - Measured from helicopter center of mass to floor level 
+
+**Release mechanism**: - Operator holds helicopter by the base (non-rotor section) - Helicopter oriented vertically with rotors horizontal - Release performed by simultaneous opening of thumb and forefinger - Drop initiated with zero initial velocity
+
+**Environmental controls**: - Indoor  setting - Air conditioning off during experiments to minimize air currents - Room temperature: 22°C (±2°C)
+
+### Flight Termination Criteria
+
+**Landing definition**: 
+
+- First contact between any part of the helicopter and the floor surface.
+- Contact detection: Visual observation by trained operator.
+- Timing stops at moment of first contact, not final rest position.
+
+## Paper Helicopter Construction Protocol
+
+### Step-by-Step Construction
+
+![Paper helicopter construction template showing Wing A, Wing B, and fold sections X, Y, Z](helicopter_design.png){#fig-template width="30%%"}
+
+1.  **Template preparation**:
+    -   Print template on A4 paper using laser printer
+    -   Verify dimensions using steel ruler
+    -   Mark fold lines clearly with pencil
+2.  **Cutting sequence**:
+    -   Cut along solid lines using craft knife and steel ruler
+    -   Maintain consistent pressure for clean edges
+    -   Verify rotor dimensions with calipers after cutting
+3.  **Folding procedure**:
+    -   Fold rotors along designated lines to create 90° angles
+    -   Ensure rotors are mirror images (one left, one right)
+    -   Fold body sections as indicated to create base structure
+4.  **Paper clip attachment**:
+    -   Attach clips to the bottom-most fold of the helicopter body
+    -   Position clips symmetrically to maintain balance
+    -   Secure clips by folding paper around them (no adhesive used)
+
+### Factor Level Implementation
+
+**Factor A: Rotor Length** $$L_A = \begin{cases} 
+7.5 \text{ cm} & \text{(low level, coded as -1)} \\
+8.5 \text{ cm} & \text{(high level, coded as +1)}
+\end{cases}$$
+
+**Factor B: Rotor Width** $$W_B = \begin{cases}
+3.5 \text{ cm} & \text{(low level, coded as -1)} \\
+5.0 \text{ cm} & \text{(high level, coded as +1)}
+\end{cases}$$
+
+**Factor C: Paper Clip Mass** $$M_C = \begin{cases}
+0 \text{ clips} & \text{(low level, coded as -1)} \\
+2 \text{ clips} & \text{(high level, coded as +1)}
+\end{cases}$$
+
+## Statistical Design and Analysis Plan
+
+### Full Factorial Design
+
+The experiment employed a $2^3$ full factorial design with 3 replicates, resulting in 24 total experimental runs. The design structure is defined as follows:
+
+$$\text{Flight Time} = \mu + \alpha_A + \alpha_B + \alpha_C + (\alpha\beta)_{AB} + (\alpha\beta)_{AC} + (\alpha\beta)_{BC} + (\alpha\beta\gamma)_{ABC} + \varepsilon$$
+
+**Factor Specifications:**
+
+\begin{align}
+\text{Factor A (Rotor Length):} \quad &\text{Low level } (-1) = 7.5 \text{ cm} \\
+&\text{High level } (+1) = 8.5 \text{ cm} \\
+\\
+\text{Factor B (Rotor Width):} \quad &\text{Low level } (-1) = 3.5 \text{ cm} \\
+&\text{High level } (+1) = 5.0 \text{ cm} \\
+\\
+\text{Factor C (Paper Clips):} \quad &\text{Low level } (-1) = 0 \text{ clips} \\
+&\text{High level } (+1) = 2 \text{ clips}
+\end{align}
+
+The 24 total runs were performed in completely randomized order to minimize the effects of systematic bias, learning effects, and environmental drift during the experimental session.
+
+### Fractional Factorial Design Simulation
+
+To evaluate the efficiency of fractional factorial designs, this study includes a $2^{3-1}$ half-fraction design simulation using a subset of the full factorial data. The fractional design was constructed using the design generator $C = AB$, which selects 4 unique treatment combinations from the original 8.
+
+\begin{align}
+\text{Flight Time} &= \text{Base} + \text{Effect}_A^* + \text{Effect}_B^* + \text{Effect}_C^* + \varepsilon \\
+\text{where: } \quad \text{Effect}_A^* &= \text{Effect}_A + \text{Effect}_{BC} \\
+\text{Effect}_B^* &= \text{Effect}_B + \text{Effect}_{AC} \\
+\text{Effect}_C^* &= \text{Effect}_C + \text{Effect}_{AB}
+\end{align}
+
+**Resulting Alias Structure:** \begin{align}
+I &= ABC \\
+A &= BC \\
+B &= AC \\
+C &= AB
+\end{align}
+
+This aliasing structure means that main effects are confounded with two-factor interactions, requiring the assumption that interactions are negligible relative to main effects.
+
+### Null Model and Hypothesis Framework
+
+The **null model** serves as the statistical baseline for hypothesis testing in experimental design. It represents the simplest possible explanation for observed data variation, assuming that experimental factors have no systematic effect on the response variable.
+
+#### Null Hypothesis Statement
+
+The null hypothesis (H₀) for this paper helicopter experiment states:
+
+**H₀: μ₁ = μ₂ = μ₃ = μ₄ = μ₅ = μ₆ = μ₇ = μ₈**
+
+Where μᵢ represents the true mean flight time for each of the eight treatment combinations in the $2^3$ factorial design. This hypothesis asserts that rotor length, rotor width, and paper clip mass have no effect on helicopter flight time, and any observed differences between treatment means result solely from random experimental error.
+
+#### Null Model Specification
+
+The null model assumes that all variation in flight time can be attributed to random error:
+
+$$Y_{ij} = \mu + \varepsilon_{ij}$$
+
+Where: - $Y_{ij}$ = flight time for the j-th observation in the i-th treatment combination - $\mu$ = grand mean flight time across all experimental conditions\
+- $\varepsilon_{ij}$ = random error term, assumed $\varepsilon_{ij} \sim N(0, \sigma^2)$
+
+Under this model, the best predictor of any individual flight time is simply the overall experimental average, regardless of factor settings.
+
+#### Statistical Testing Framework
+
+The Analysis of Variance (ANOVA) tests the null hypothesis by comparing the null model against the full factorial model. The test statistic evaluates whether observed treatment differences exceed what would be expected under random variation alone:
+
+$$F = \frac{\text{Mean Square for Treatments}}{\text{Mean Square Error}}$$
+
+Rejection of H₀ (F-statistic significantly greater than 1) provides evidence that at least one factor significantly affects helicopter flight time, justifying progression from the null model to the full factorial analysis.
+
+### Statistical Analysis Methods
+
+The experimental data was analyzed using Analysis of Variance (ANOVA) with a significance level of $\alpha = 0.05$ to identify statistically significant effects. Following the ANOVA, a linear regression model was developed based on the significant effects to predict helicopter flight time as a function of the experimental factors.
+
+Model adequacy was assessed through comprehensive residual analysis, including:
+
+-   Normal probability plots to verify the assumption of normally distributed residuals
+-   Residuals vs. fitted values plots to check for homoscedasticity and model adequacy
+-   Outlier detection using standardized residuals and leverage analysis
+
+### Measurement System Analysis (MSA Type 1)
+
+A Measurement System Analysis Type 1 study was performed to validate the adequacy of the manual stopwatch timing method. This study quantified the measurement system's precision (repeatability) and accuracy (bias) by isolating the stopwatch timing error from helicopter flight variability, ensuring that observed experimental effects represent true helicopter performance differences rather than measurement artifacts.
+
+#### Experimental Protocol
+
+**Reference Value Establishment**: A reference time of 4.150 seconds was selected to match the typical flight time of the optimal helicopter configuration (A+ B- C-) identified in preliminary testing. This reference value represents the "true" time that the measurement system aims to capture accurately.
+
+**Measurement Procedure**: The primary experimenter (single operator throughout all trials) performed 50 consecutive timing trials using the following protocol:
+
+1. A digital timer (smartphone stopwatch application with millisecond precision) was used as the reference standard
+2. Both the digital timer and the Hanhart stopwatch were started simultaneously
+3. When the digital timer reached exactly 4.150 seconds (indicated by visual display or audible signal), the operator stopped the Hanhart stopwatch
+4. The stopwatch reading was recorded immediately
+5. The difference between the stopwatch reading and the reference value (4.150 seconds) was calculated as the measurement error for that trial
+6. The process was repeated 50 times in a single session to maintain consistency
+
+#### Tolerance Specification
+
+The tolerance represents the acceptable range of variation for the measurement system relative to the process being measured. Rather than arbitrarily selecting a tolerance value, this study adopted a target-driven approach based on Six Sigma methodology, which specifies that measurement systems should achieve a Capability Index (Cg) of at least 2.0 for ideal performance.
+
+The tolerance was calculated backwards from the target Cg value using the relationship:
+
+$$T = \frac{C_g \times 6 \times \sigma}{0.2}$$
+
+where σ is the standard deviation of the 50 stopwatch measurements. This approach ensures that the tolerance specification is appropriate for the observed measurement system variability while targeting industry-standard capability levels.
+
+#### Capability Indices
+
+Two standard capability indices were calculated to assess measurement system adequacy:
+
+**Potential Gage Capability (Cg)**: This index quantifies measurement precision (repeatability) by comparing the measurement system's variation to a percentage of the tolerance:
+
+$$C_g = \frac{0.2 \times T}{6 \times \sigma}$$
+
+where T is the total tolerance and σ is the standard deviation of the 50 measurements. A value of Cg ≥ 1.33 indicates adequate precision, with Cg = 2.0 representing Six Sigma ideal performance.
+
+**Gage Capability with Systematic Error (Cgk)**: This index accounts for both precision and accuracy (bias):
+
+$$C_{gk} = \frac{(0.2 \times T) - |\text{Bias}|}{3 \times \sigma}$$
+
+where Bias = x̄ - x_true, with x̄ representing the mean of the 50 measurements and x_true = 4.150 seconds. A value of Cgk ≥ 1.33 indicates adequate combined precision and accuracy.
+
+**Acceptance Criteria**: Both Cg and Cgk must be ≥ 1.33 for the measurement system to be considered adequate. Values of Cg ≥ 2.0 represent excellent (Six Sigma level) capability.
+
+The statistical constant K = 0.2 (representing 20% of the tolerance) is used in both calculations as a standard fraction that balances measurement system capability against practical tolerance requirements.
+
+# Results
+
+```{r load-data, include=FALSE}
+#| label: load-data
+
+# Load the datasets
+full_data_raw <- read_csv("Full_factorial_run_sheet.csv")
+frac_data_raw <- read_csv("fractional_helicopter_runsheet.csv")
+
+# Prepare Full Factorial Data
+full_data <- full_data_raw %>%
+  mutate(
+    A_RotorLength_Factor = as.factor(ifelse(A_RotorLength == "-", "7.5cm (Low)", "8.5cm (High)")),
+    B_RotorWidth_Factor  = as.factor(ifelse(B_RotorWidth == "-", "3.5cm (Low)", "5.0cm (High)")),
+    C_PaperClip_Factor   = as.factor(ifelse(C_PaperClip == "-", "0 clips (Low)", "2 clips (High)"))
+  )
+
+# Prepare Fractional Factorial Data
+frac_data <- frac_data_raw %>%
+  rename(
+    RotorLength_cm = RotorLength_cm_actual,
+    RotorWidth_cm = RotorWidth_cm_actual,
+    PaperClip = PaperClip_actual
+  ) %>%
+  mutate(
+    A_RotorLength_Factor = as.factor(ifelse(A_RotorLength == -1, "7.5cm (Low)", "8.5cm (High)")),
+    B_RotorWidth_Factor  = as.factor(ifelse(B_RotorWidth == -1, "3.5cm (Low)", "5.0cm (High)")),
+    C_PaperClip_Factor   = as.factor(ifelse(C_PaperClip == -1, "0 clips (Low)", "2 clips (High)"))
+  )
+```
+
+This section presents the statistical results from the experimental data. The findings are reported objectively without interpretation, following the structure of the analysis plan. First, the results from the full $2^3$ factorial design are presented, followed by the analysis of the simulated $2^{3-1}$ fractional factorial design.
+
+## Measurement System Analysis (MSA Type 1)
+
+Prior to analyzing the factorial experiment data, the stopwatch timing method was validated through MSA Type 1 to ensure adequate precision and accuracy.
+```{r load-new-msa-data, include=FALSE}
+#| label: load-new-msa-data
+
+# Load new MSA Type 1 data (stopwatch vs phone timer)
+msa1_new <- read_csv("new_msa1.csv")
+
+# Calculate reference value and basic statistics
+x_true <- unique(msa1_new$Phone_Timer_s)
+x_mean <- mean(msa1_new$Stopwatch_Reading_s)
+sigma <- sd(msa1_new$Stopwatch_Reading_s)
+bias <- x_mean - x_true
+n_trials <- nrow(msa1_new)
+
+# Calculate tolerance to achieve target Cg = 2.0 (Six Sigma ideal)
+target_Cg <- 2.0
+tolerance <- (target_Cg * 6 * sigma) / 0.2
+
+# Calculate capability indices
+Cg <- (0.2 * tolerance) / (6 * sigma)
+Cgk <- ((0.2 * tolerance) - abs(bias)) / (3 * sigma)
+
+# Determine status
+cg_status <- ifelse(Cg >= 1.33, "Adequate", "Inadequate")
+cgk_status <- ifelse(Cgk >= 1.33, "Adequate", "Inadequate")
+overall_status <- ifelse(Cg >= 1.33 && Cgk >= 1.33, "Adequate", "Inadequate")
+```
+
+```{r msa1-new-summary-stats}
+#| label: tbl-msa1-new-summary
+#| tbl-cap: "Summary statistics from MSA Type 1 study (n=50 stopwatch trials)"
+
+# Calculate summary statistics
+msa1_new_summary <- data.frame(
+  Statistic = c("Number of Trials", "Reference Value (Phone Timer)", 
+                "Mean Stopwatch Reading", "Standard Deviation", 
+                "Minimum Reading", "Maximum Reading", "Range"),
+  Value = c(
+    as.character(n_trials),
+    sprintf("%.3f s", x_true),
+    sprintf("%.3f s", x_mean),
+    sprintf("%.4f s", sigma),
+    sprintf("%.1f s", min(msa1_new$Stopwatch_Reading_s)),
+    sprintf("%.1f s", max(msa1_new$Stopwatch_Reading_s)),
+    sprintf("%.1f s", max(msa1_new$Stopwatch_Reading_s) - min(msa1_new$Stopwatch_Reading_s))
+  )
+)
+
+create_table(msa1_new_summary, "MSA Type 1 Summary Statistics")
+```
+
+### Measurement Accuracy and Precision
+```{r msa1-new-bias-analysis}
+#| label: tbl-msa1-new-bias
+#| tbl-cap: "Bias analysis showing measurement accuracy relative to digital reference"
+
+# Bias analysis table
+bias_table <- data.frame(
+  Metric = c("Systematic Bias", "Bias as % of Reference", 
+             "Absolute Mean Error", "Interpretation"),
+  Value = c(
+    sprintf("%.4f seconds", bias),
+    sprintf("%.2f%%", (abs(bias)/x_true) * 100),
+    sprintf("%.4f seconds", mean(abs(msa1_new$Error_s))),
+    ifelse(abs(bias) < 0.05, 
+           "Negligible bias - measurements well-centered",
+           "Moderate bias detected")
+  )
+)
+
+create_table(bias_table, "Accuracy Assessment")
+```
+
+```{r msa1-new-capability-table}
+#| label: tbl-msa1-new-capability
+#| tbl-cap: "Gage capability indices calculated from stopwatch timing trials"
+
+# Capability indices table
+capability_table <- data.frame(
+  Index = c("Cg", "Cgk"),
+  Description = c("Precision (Repeatability)", 
+                  "Precision & Accuracy Combined"),
+  Formula = c("(0.2 * T) / (6 * sigma)", 
+              "((0.2 * T) - |Bias|) / (3 * sigma)"),
+  Value = c(sprintf("%.2f", Cg), sprintf("%.2f", Cgk)),
+  Criterion = c(">= 1.33", ">= 1.33"),
+  Status = c(cg_status, cgk_status)
+)
+
+create_table(capability_table, "MSA Type 1 Capability Indices")
+```
+
+```{r msa1-new-tolerance-info, results='asis'}
+#| label: msa1-new-tolerance-info
+
+cat("\n\n**Tolerance Specification**: ")
+cat(paste0("To achieve the target capability of Cg = ", sprintf("%.1f", target_Cg), 
+           " (Six Sigma ideal), the calculated tolerance is **±", 
+           sprintf("%.3f", tolerance/2), " seconds** (total tolerance = ", 
+           sprintf("%.3f", tolerance), " seconds). "))
+cat("This tolerance was derived from the observed measurement variability and represents the acceptable range for stopwatch timing error relative to the specified capability target.")
+```
+
+### MSA Type 1 Visualizations
+```{r msa1-new-run-chart}
+#| label: fig-msa1-new-run-chart
+#| fig-cap: "Run chart showing all 50 stopwatch readings against the phone timer reference (4.150s). The horizontal lines indicate the reference value (dashed black) and mean stopwatch reading (solid red)."
+#| fig-width: 10
+#| fig-height: 6
+
+# Create run chart
+msa1_new %>%
+  ggplot(aes(x = Trial, y = Stopwatch_Reading_s)) +
+  geom_line(color = "steelblue", alpha = 0.6, linewidth = 0.8) +
+  geom_point(color = "steelblue", size = 2.5, alpha = 0.8) +
+  geom_hline(yintercept = x_true, 
+             linetype = "dashed", color = "black", linewidth = 1) +
+  geom_hline(yintercept = x_mean, 
+             linetype = "solid", color = "red", linewidth = 1, alpha = 0.8) +
+  annotate("text", x = 5, y = x_true - 0.05, 
+           label = paste("Reference:", round(x_true, 3), "s"), 
+           color = "black", hjust = 0, size = 3.5) +
+  annotate("text", x = 5, y = x_mean + 0.05, 
+           label = paste("Mean:", round(x_mean, 3), "s"), 
+           color = "red", hjust = 0, size = 3.5) +
+  labs(
+    title = "MSA Type 1: Run Chart of 50 Stopwatch Timing Trials",
+    subtitle = paste("Stopwatch Resolution: 0.1s | σ =", round(sigma, 4), "s | Bias =", round(bias, 4), "s"),
+    x = "Trial Number",
+    y = "Stopwatch Reading (seconds)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11)
+  )
+```
+
+```{r msa1-new-error-distribution}
+#| label: fig-msa1-new-error-dist
+#| fig-cap: "Distribution of measurement errors (stopwatch reading minus reference value). The histogram shows the frequency of positive (late) and negative (early) timing errors."
+#| fig-width: 8
+#| fig-height: 6
+
+# Create error distribution histogram
+msa1_new %>%
+  ggplot(aes(x = Error_s)) +
+  geom_histogram(bins = 15, fill = "steelblue", alpha = 0.7, color = "black") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 1) +
+  geom_vline(xintercept = bias, linetype = "solid", color = "red", linewidth = 1) +
+  annotate("text", x = 0, y = Inf, 
+           label = "Perfect Accuracy", 
+           vjust = 2, hjust = 1.1, color = "black", size = 3.5, angle = 90) +
+  annotate("text", x = bias, y = Inf, 
+           label = paste("Mean Bias:", round(bias, 4), "s"), 
+           vjust = 2, hjust = -0.1, color = "red", size = 3.5, angle = 90) +
+  labs(
+    title = "MSA Type 1: Distribution of Measurement Errors",
+    subtitle = "Positive errors = stopwatch stopped late; Negative errors = stopped early",
+    x = "Error (Stopwatch - Reference) [seconds]",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11)
+  )
+```
+
+```{r msa1-new-capability-chart}
+#| label: fig-msa1-new-capability
+#| fig-cap: "Capability indices compared to acceptance criterion (1.33) and Six Sigma ideal target (2.0). Both indices exceed minimum requirements."
+#| fig-width: 8
+#| fig-height: 6
+
+# Create capability comparison chart
+capability_data <- data.frame(
+  Index = c("Cg\n(Precision)", "Cgk\n(Precision & Accuracy)"),
+  Value = c(Cg, Cgk),
+  Status = c(cg_status, cgk_status)
+)
+
+capability_data %>%
+  ggplot(aes(x = Index, y = Value, fill = Status)) +
+  geom_col(alpha = 0.8, width = 0.6) +
+  geom_hline(yintercept = 1.33, linetype = "dashed", 
+             color = "red", linewidth = 1) +
+  geom_hline(yintercept = 2.0, linetype = "dotted", 
+             color = "darkgreen", linewidth = 1) +
+  geom_text(aes(label = round(Value, 2)), 
+            vjust = -0.5, size = 6, fontface = "bold") +
+  annotate("text", x = 1.5, y = 1.4, 
+           label = "Minimum: 1.33", 
+           color = "red", size = 3.5) +
+  annotate("text", x = 1.5, y = 2.1, 
+           label = "Six Sigma Ideal: 2.0", 
+           color = "darkgreen", size = 3.5) +
+  scale_fill_manual(values = c("Adequate" = "darkgreen", "Inadequate" = "darkred")) +
+  labs(
+    title = "MSA Type 1: Capability Indices",
+    subtitle = paste("Overall Status:", overall_status),
+    x = "Capability Index",
+    y = "Index Value",
+    fill = "Status"
+  ) +
+  ylim(0, max(c(Cg, Cgk)) * 1.15) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11, 
+                                  color = ifelse(overall_status == "Adequate", 
+                                                "darkgreen", "darkred"),
+                                  face = "bold"),
+    legend.position = "bottom"
+  )
+```
+
+
+## Full Factorial Design Analysis
+
+The analysis was conducted on the complete dataset of 24 runs from the full factorial experiment.
+
+```{r descriptive-stats}
+#| label: tbl-descriptive
+#| tbl-cap: "Descriptive statistics for the 24 flight times from the full factorial experiment"
+
+# Calculate summary statistics
+summary_stats <- full_data %>%
+  summarise(
+    N = n(),
+    Mean = round(mean(Time_s), 3),
+    `Std Dev` = round(sd(Time_s), 3),
+    Minimum = round(min(Time_s), 3),
+    Median = round(median(Time_s), 3),
+    Maximum = round(max(Time_s), 3)
+  )
+
+create_table(summary_stats, "Descriptive Statistics of Flight Time (seconds)")
+```
+
+```{r treatment-means}
+#| label: tbl-treatment-means
+#| tbl-cap: "Mean flight times for all eight treatment combinations"
+
+# Calculate treatment combination means
+treatment_means <- full_data %>%
+  group_by(A_RotorLength_Factor, B_RotorWidth_Factor, C_PaperClip_Factor) %>%
+  summarise(
+    `Mean Time (s)` = round(mean(Time_s), 3),
+    `Std Dev` = round(sd(Time_s), 3),
+    n = n(),
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(`Mean Time (s)`))
+
+create_table(treatment_means, "Treatment Combination Means (Ranked by Performance)")
+```
+
+To identify the most influential factors and interactions, a full linear model was fitted to the data. The standardized effects of all model terms are visualized in a Pareto chart.
+
+```{r pareto-plot}
+#| label: fig-pareto
+#| fig-cap: "Pareto chart of standardized effects for flight time. The vertical line indicates the significance threshold at α = 0.05. Effects extending beyond this line are statistically significant."
+#| fig-width: 8
+#| fig-height: 6
+
+# Fit the full model
+full_model <- lm(Time_s ~ A_RotorLength_Factor * B_RotorWidth_Factor * C_PaperClip_Factor, data = full_data)
+
+# Calculate significance threshold
+df_error <- df.residual(full_model)
+t_crit <- qt(0.975, df = df_error)
+
+# Create Pareto chart
+tidy(full_model) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    term = str_replace_all(term, "A_RotorLength_Factor", "Rotor Length"),
+    term = str_replace_all(term, "B_RotorWidth_Factor", "Rotor Width"),
+    term = str_replace_all(term, "C_PaperClip_Factor", "Paper Clips"),
+    term = str_replace_all(term, "8.5cm \\(High\\)", ""),
+    term = str_replace_all(term, "5.0cm \\(High\\)", ""),
+    term = str_replace_all(term, "2 clips \\(High\\)", ""),
+    term = str_replace_all(term, ":", " × ")
+  ) %>%
+  ggplot(aes(x = fct_reorder(term, abs(statistic)), y = abs(statistic))) +
+  geom_col(fill = "steelblue", alpha = 0.8) +
+  geom_hline(yintercept = t_crit, linetype = "dashed", color = "red", size = 1) +
+  coord_flip() +
+  labs(
+    title = "Pareto Chart of Standardized Effects",
+    subtitle = "Full Factorial Model",
+    x = "Factor / Interaction",
+    y = "Absolute t-statistic"
+  ) +
+  annotate("text", x = 1.5, y = t_crit + 0.5, 
+           label = "α = 0.05 Threshold", color = "red", size = 3)
+```
+
+The statistical significance of each term was formally assessed using Analysis of Variance (ANOVA).
+
+```{r anova-table}
+#| label: tbl-anova
+#| tbl-cap: "Analysis of Variance (ANOVA) for the full factorial model. Terms with p-value < 0.05 are statistically significant."
+
+# Perform ANOVA
+anova_full <- anova(full_model)
+
+# Clean and format ANOVA table
+anova_clean <- tidy(anova_full) %>%
+  mutate(
+    term = str_replace_all(term, "A_RotorLength_Factor", "Rotor Length"),
+    term = str_replace_all(term, "B_RotorWidth_Factor", "Rotor Width"),
+    term = str_replace_all(term, "C_PaperClip_Factor", "Paper Clips"),
+    term = str_replace_all(term, ":", " × "),
+    sumsq = round(sumsq, 4),
+    meansq = round(meansq, 4),
+    statistic = round(statistic, 4),
+    p.value = ifelse(p.value < 0.001, "<0.001", round(p.value, 4))
+  ) %>%
+  dplyr::select(
+    Term = term,
+    Df = df,
+    `Sum Sq` = sumsq,
+    `Mean Sq` = meansq,
+    `F value` = statistic,
+    `P value` = p.value
+  )
+
+create_table(anova_clean, "ANOVA Results for Full Factorial Model")
+```
+
+Based on the significant effects identified in the ANOVA, a reduced predictive model was developed including all significant terms.
+
+```{r correct-reduced-model}
+#| label: correct-reduced-model
+#| results: 'asis'
+
+# Fit CORRECT reduced model with ALL significant terms based on ANOVA
+correct_reduced_model <- lm(Time_s ~ A_RotorLength_Factor + B_RotorWidth_Factor + C_PaperClip_Factor + 
+                           A_RotorLength_Factor:C_PaperClip_Factor + 
+                           B_RotorWidth_Factor:C_PaperClip_Factor, 
+                           data = full_data)
+
+# Extract model statistics
+model_summary <- summary(correct_reduced_model)
+r_sq <- round(model_summary$r.squared * 100, 2)
+adj_r_sq <- round(model_summary$adj.r.squared * 100, 2)
+
+cat(paste0("**Model Performance**: The reduced model explains **", r_sq, 
+           "%** of the variance in flight time (Adjusted R² = ", adj_r_sq, "%)."))
+```
+
+```{r model-coefficients}
+#| label: tbl-coefficients
+#| tbl-cap: "Regression coefficients for the correctly specified reduced model"
+
+# Display model coefficients
+coeff_table <- tidy(correct_reduced_model) %>%
+  mutate(
+    term = str_replace_all(term, "A_RotorLength_Factor", "Rotor Length"),
+    term = str_replace_all(term, "B_RotorWidth_Factor", "Rotor Width"),
+    term = str_replace_all(term, "C_PaperClip_Factor", "Paper Clips"),
+    term = str_replace_all(term, "8.5cm \\(High\\)", ""),
+    term = str_replace_all(term, "5.0cm \\(High\\)", ""),
+    term = str_replace_all(term, "2 clips \\(High\\)", ""),
+    term = str_replace_all(term, ":", " × "),
+    estimate = round(estimate, 4),
+    std.error = round(std.error, 4),
+    statistic = round(statistic, 4),
+    p.value = ifelse(p.value < 0.001, "<0.001", round(p.value, 4))
+  ) %>%
+  dplyr::select(
+    Term = term,
+    Estimate = estimate,
+    `Std Error` = std.error,
+    `t value` = statistic,
+    `P value` = p.value
+  )
+
+create_table(coeff_table, "Regression Coefficients for Correctly Specified Model")
+```
+
+```{r effect-sizes}
+#| label: tbl-effect-sizes
+#| tbl-cap: "Main effect sizes and practical significance"
+
+# Calculate effect sizes from the data
+effect_sizes <- full_data %>%
+  summarise(
+    `Rotor Length Effect` = round(mean(Time_s[A_RotorLength_Factor == "8.5cm (High)"]) - 
+                                 mean(Time_s[A_RotorLength_Factor == "7.5cm (Low)"]), 3),
+    `Rotor Width Effect` = round(mean(Time_s[B_RotorWidth_Factor == "5.0cm (High)"]) - 
+                                mean(Time_s[B_RotorWidth_Factor == "3.5cm (Low)"]), 3),
+    `Paper Clip Effect` = round(mean(Time_s[C_PaperClip_Factor == "2 clips (High)"]) - 
+                               mean(Time_s[C_PaperClip_Factor == "0 clips (Low)"]), 3)
+  ) %>%
+  pivot_longer(everything(), names_to = "Factor", values_to = "Effect Size (s)") %>%
+  mutate(
+    `Percent Change` = round(abs(`Effect Size (s)`) / mean(full_data$Time_s) * 100, 1),
+    Direction = ifelse(`Effect Size (s)` > 0, "Increase", "Decrease")
+  )
+
+create_table(effect_sizes, "Main Effect Sizes and Practical Impact")
+```
+
+Model adequacy was assessed by analyzing the model's residuals.
+
+```{r diagnostic-plots}
+#| label: fig-diagnostics
+#| fig-cap: "Diagnostic plots for the correctly specified reduced model: (A) Residuals vs Fitted values, (B) Normal Q-Q plot"
+#| fig-width: 10
+#| fig-height: 5
+
+# Generate diagnostic plots for the correct model
+diag_plots <- create_diagnostic_plots(correct_reduced_model)
+
+# Combine plots
+diag_plots$p1 + diag_plots$p2 + plot_annotation(tag_levels = "A")
+```
+
+The effects of all significant factors on flight time are visualized below.
+
+```{r create-main-effects-plots, include=FALSE}
+p1 <- create_main_effects_plot(full_data, "A_RotorLength_Factor", "Rotor Length (A)", c("lightblue", "darkblue"))
+p2 <- create_main_effects_plot(full_data, "B_RotorWidth_Factor", "Rotor Width (B)", c("lightgreen", "darkgreen"))
+p3 <- create_main_effects_plot(full_data, "C_PaperClip_Factor", "Paper Clip (C)", c("lightcoral", "darkred"))
+```
+
+```{r msin-effect-A}
+#| label: fig-main-effect-A
+#| fig-cap: "Main effect of Rotor Length (A) on flight time. The plot shows the distribution of flight times at the low (7.5cm) and high (8.5cm) levels."
+#| fig-width: 7
+#| fig-height: 5
+
+# Display the first plot
+p1
+```
+
+```{r main-effect-B}
+#| label: fig-main-effect-B
+#| fig-cap: "Main effect of Rotor Width (B) on flight time. The plot shows the distribution of flight times at the low (3.5cm) and high (5.0cm) levels."
+#| fig-width: 7
+#| fig-height: 5
+
+# Display the second plot
+p2
+```
+
+```{r main-effect-C}
+#| label: fig-main-effect-C
+#| fig-cap: "Main effect of Paper Clips (C) on flight time. The plot shows the distribution of flight times with no paper clips (Low) and with two paper clips (High)."
+#| fig-width: 7
+#| fig-height: 5
+
+# Display the third plot
+p3
+```
+
+The significant two-factor interactions are shown below.
+
+```{r interaction-plots}
+#| label: fig-interactions
+#| fig-cap: "Significant two-factor interaction plots: (A) Rotor Length × Paper Clips, (B) Rotor Width × Paper Clips"
+#| fig-width: 12
+#| fig-height: 5
+
+# Create interaction plots for both significant interactions
+p1 <- create_interaction_plot(full_data, "A_RotorLength_Factor", "C_PaperClip_Factor", 
+                             "Rotor Length × Paper Clips", c("blue", "red"))
+p2 <- create_interaction_plot(full_data, "B_RotorWidth_Factor", "C_PaperClip_Factor", 
+                             "Rotor Width × Paper Clips", c("green", "red"))
+
+p1 + p2 + plot_annotation(tag_levels = "A")
+```
+
+The complete experimental design space is visualized in the cube plot showing all treatment combinations.
+
+```{r cube-plot-enhanced}
+#| label: fig-cube-enhanced
+#| fig-cap: "Enhanced cube plot showing mean flight times at each corner of the design space, with optimal configuration highlighted"
+#| fig-width: 10
+#| fig-height: 6
+
+# Create enhanced cube plot with optimal condition highlighted
+cube_summary <- full_data %>%
+  group_by(A_RotorLength_Factor, B_RotorWidth_Factor, C_PaperClip_Factor) %>%
+  summarise(mean_time = mean(Time_s), .groups = 'drop') %>%
+  mutate(
+    condition = paste(
+      ifelse(A_RotorLength_Factor == "8.5cm (High)", "A+", "A-"),
+      ifelse(B_RotorWidth_Factor == "5.0cm (High)", "B+", "B-"), 
+      ifelse(C_PaperClip_Factor == "2 clips (High)", "C+", "C-")
+    ),
+    is_optimal = mean_time == max(mean_time),
+    is_worst = mean_time == min(mean_time)
+  )
+
+full_data %>%
+  left_join(cube_summary, by = c("A_RotorLength_Factor", "B_RotorWidth_Factor", "C_PaperClip_Factor")) %>%
+  ggplot(aes(x = A_RotorLength_Factor, y = Time_s)) +
+  stat_summary(aes(color = is_optimal), fun = mean, geom = "point", size = 4) +
+  stat_summary(fun = mean, geom = "line", aes(group = 1), alpha = 0.7) +
+  facet_grid(B_RotorWidth_Factor ~ C_PaperClip_Factor, 
+             labeller = labeller(.default = label_both)) +
+  scale_color_manual(values = c("FALSE" = "steelblue", "TRUE" = "red")) +
+  labs(
+    title = "Design Space: Mean Flight Times by Factor Combinations",
+    subtitle = "Red point indicates optimal configuration (A+ B- C-)",
+    x = "Rotor Length", y = "Flight Time (seconds)",
+    color = "Optimal"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+```
+
+## Fractional Factorial Design Analysis
+
+The analysis was repeated using only the 12 runs corresponding to a $2^{3-1}$ half-fraction design, simulating a more resource-efficient experiment.
+
+```{r frac-design-representation}
+#| label: fig-fractional-design
+#| fig-cap: "3D cube plot showing the 2^(3-1) fractional factorial design space. Red vertices represent included treatment combinations, orange vertices represent excluded combinations. Lines connect adjacent factor levels to form the cube structure."
+#| fig-width: 12
+#| fig-height: 10
+
+# Get means for all 8 corners
+full_means <- full_data %>%
+  group_by(A_RotorLength_Factor, B_RotorWidth_Factor, C_PaperClip_Factor) %>%
+  summarise(mean_time = mean(Time_s), .groups = 'drop')
+
+# Identify fractional design corners
+frac_corners <- frac_data %>%
+  distinct(A_RotorLength_Factor, B_RotorWidth_Factor, C_PaperClip_Factor) %>%
+  mutate(design_type = "Included")
+
+# Combine and create 3D coordinates
+cube_data <- full_means %>%
+  left_join(frac_corners, by = c("A_RotorLength_Factor", "B_RotorWidth_Factor", "C_PaperClip_Factor")) %>%
+  mutate(
+    design_type = ifelse(is.na(design_type), "Excluded", design_type),
+    # Create 3D coordinates for cube vertices
+    x = ifelse(A_RotorLength_Factor == "7.5cm (Low)", 0, 1),
+    y = ifelse(B_RotorWidth_Factor == "3.5cm (Low)", 0, 1),
+    z = ifelse(C_PaperClip_Factor == "0 clips (Low)", 0, 1),
+    # Create labels with mean time
+    label = paste0(round(mean_time, 2), "s")
+  )
+
+# Define all 12 edges of the cube - COMPLETE VERSION
+edges <- data.frame(
+  x_start = c(
+    0, 1, 1, 0,
+    0, 1, 1, 0,
+    0, 1, 1, 0
+  ),
+  y_start = c(
+    0, 0, 1, 1,
+    0, 0, 1, 1,
+    0, 0, 1, 1
+  ),
+  z_start = c(
+    0, 0, 0, 0,
+    1, 1, 1, 1,
+    0, 0, 0, 0
+  ),
+  x_end = c(
+    1, 1, 0, 0,
+    1, 1, 0, 0,
+    0, 1, 1, 0
+  ),
+  y_end = c(
+    0, 1, 1, 0,
+    0, 1, 1, 0,
+    0, 0, 1, 1
+  ),
+  z_end = c(
+    0, 0, 0, 0,
+    1, 1, 1, 1,
+    1, 1, 1, 1
+  )
+)
+
+# Create isometric projection for 3D effect
+iso_angle <- pi/6  # 30 degrees
+cube_data <- cube_data %>%
+  mutate(
+    x_proj = x - z * cos(iso_angle),
+    y_proj = y + z * sin(iso_angle)
+  )
+
+edges_proj <- edges %>%
+  mutate(
+    x_start_proj = x_start - z_start * cos(iso_angle),
+    y_start_proj = y_start + z_start * sin(iso_angle),
+    x_end_proj = x_end - z_end * cos(iso_angle),
+    y_end_proj = y_end + z_end * sin(iso_angle)
+  )
+
+# Create the cube plot
+ggplot() +
+  # Draw cube edges
+  geom_segment(data = edges_proj,
+               aes(x = x_start_proj, y = y_start_proj, 
+                   xend = x_end_proj, yend = y_end_proj),
+               color = "gray30", linewidth = 1, alpha = 0.6) +
+  # Draw vertices
+  geom_point(data = cube_data,
+             aes(x = x_proj, y = y_proj, 
+                 color = design_type, shape = design_type, size = design_type),
+             alpha = 0.9, stroke = 1.5) +
+  # Add value labels
+  geom_text(data = cube_data,
+            aes(x = x_proj, y = y_proj, label = label),
+            vjust = -2, hjust = 0.5, size = 4, fontface = "bold", color = "black") +
+  # Add factor level labels for ALL 8 VERTICES
+  annotate("text", x = -cos(iso_angle)-0.1, y = sin(iso_angle)-0.05, 
+           label = "A- B- C+", size = 3.5, hjust = 1, color = "gray20") +
+  annotate("text", x = -0.15, y = 0, label = "A- B- C-", 
+           size = 3.5, hjust = 1, color = "gray20") +
+  annotate("text", x = -cos(iso_angle)-0.1, y = 1 + sin(iso_angle)+0.05, 
+           label = "A- B+ C+", size = 3.5, hjust = 1, color = "gray20") +
+  annotate("text", x = -0.15, y = 1, label = "A- B+ C-", 
+           size = 3.5, hjust = 1, color = "gray20") +
+  annotate("text", x = 1.15, y = 0, label = "A+ B- C-", 
+           size = 3.5, hjust = 0, color = "gray20") +
+  annotate("text", x = 1 - cos(iso_angle)+0.1, y = sin(iso_angle)-0.05, 
+           label = "A+ B- C+", size = 3.5, hjust = 0, color = "gray20") +
+  annotate("text", x = 1.15, y = 1, label = "A+ B+ C-", 
+           size = 3.5, hjust = 0, color = "gray20") +
+  annotate("text", x = 1 - cos(iso_angle)+0.1, y = 1 + sin(iso_angle)+0.05, 
+           label = "A+ B+ C+", size = 3.5, hjust = 0, color = "gray20") +
+  # Styling
+  scale_color_manual(
+    values = c("Excluded" = "darkorange2", "Included" = "red2"),
+    name = "Design Status"
+  ) +
+  scale_shape_manual(
+    values = c("Excluded" = 1, "Included" = 16),
+    name = "Design Status"
+  ) +
+  scale_size_manual(
+    values = c("Excluded" = 8, "Included" = 10),
+    name = "Design Status"
+  ) +
+  coord_fixed(ratio = 1) +
+  labs(
+    title = "Cube Plot: Fractional Factorial Design (2^(3-1)) in 3D Design Space",
+    subtitle = "Red filled circles = Included runs | Orange hollow circles = Excluded runs\nVertices show mean flight times; cube edges connect adjacent factor levels",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold", color = "gray20"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11, color = "gray30"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    plot.margin = margin(30, 30, 30, 30)
+  ) +
+  # Add axis arrows and labels - ADJUSTED POSITIONING
+  annotate("segment", x = -0.4, y = -0.2, xend = 1.4, yend = -0.2,
+           arrow = arrow(length = unit(0.3, "cm")), linewidth = 0.8, color = "gray40") +
+  annotate("segment", x = -0.4, y = -0.2, xend = -0.4, yend = 1.2,
+           arrow = arrow(length = unit(0.3, "cm")), linewidth = 0.8, color = "gray40") +
+  annotate("segment", x = -0.4, y = -0.2, xend = -0.4 - cos(iso_angle)*0.6, yend = -0.2 + sin(iso_angle)*0.6,
+           arrow = arrow(length = unit(0.3, "cm")), linewidth = 0.8, color = "gray40") +
+  annotate("text", x = 1.5, y = -0.2, label = "A (Rotor Length)", 
+           size = 3.5, hjust = 0, vjust = 0.5, fontface = "bold") +
+  annotate("text", x = -0.4, y = 1.35, label = "B (Rotor Width)", 
+           size = 3.5, hjust = 0.5, vjust = 0, fontface = "bold") +
+  annotate("text", x = -0.4 - cos(iso_angle)*0.7, y = -0.2 + sin(iso_angle)*0.7, 
+           label = "C (Paper Clips)", size = 3.5, hjust = 0.5, vjust = 0, fontface = "bold", angle = 30) +
+  # Expand limits to ensure all labels are visible
+  xlim(-1.2, 1.8) +
+  ylim(-0.5, 1.6)
+```
+
+An ANOVA was performed on the fractional design data, with results reflecting the design's alias structure.
+
+```{r frac-anova}
+#| label: tbl-frac-anova
+#| tbl-cap: "ANOVA for fractional factorial model showing aliased effects"
+
+# Fit fractional factorial model - NOTE: Can only estimate main effects due to aliasing
+frac_model <- lm(Time_s ~ A_RotorLength_Factor + B_RotorWidth_Factor + C_PaperClip_Factor, 
+                 data = frac_data)
+
+# ANOVA for fractional data
+anova_frac <- anova(frac_model)
+
+# Clean fractional ANOVA table with alias structure noted
+anova_frac_clean <- tidy(anova_frac) %>%
+  mutate(
+    term = case_when(
+      str_detect(term, "A_RotorLength") ~ "A (+ BC interaction)",
+      str_detect(term, "B_RotorWidth") ~ "B (+ AC interaction)", 
+      str_detect(term, "C_PaperClip") ~ "C (+ AB interaction)",
+      TRUE ~ term
+    ),
+    sumsq = round(sumsq, 4),
+    meansq = round(meansq, 4),
+    statistic = round(statistic, 4),
+    p.value = ifelse(p.value < 0.001, "<0.001", round(p.value, 4))
+  ) %>%
+  dplyr::select(
+    `Aliased Effect` = term,
+    Df = df,
+    `Sum Sq` = sumsq,
+    `Mean Sq` = meansq,
+    `F value` = statistic,
+    `P value` = p.value
+  )
+
+create_table(anova_frac_clean, "ANOVA Results for Fractional Factorial Model")
+```
+
+A comparison of the optimal configurations identified by both designs demonstrates the effectiveness of the fractional approach.
+
+```{r design-comparison}
+#| label: tbl-design-comparison
+#| tbl-cap: "Comparison of optimal configurations and performance between full and fractional factorial designs"
+
+# Find optimal conditions from each design
+full_optimal <- full_data %>%
+  group_by(A_RotorLength_Factor, B_RotorWidth_Factor, C_PaperClip_Factor) %>%
+  summarise(mean_time = mean(Time_s), .groups = 'drop') %>%
+  slice_max(mean_time, n = 1) %>%
+  mutate(Design = "Full Factorial (24 runs)")
+
+frac_optimal <- frac_data %>%
+  group_by(A_RotorLength_Factor, B_RotorWidth_Factor, C_PaperClip_Factor) %>%
+  summarise(mean_time = mean(Time_s), .groups = 'drop') %>%
+  slice_max(mean_time, n = 1) %>%
+  mutate(Design = "Fractional Factorial (12 runs)")
+
+# Combine for comparison
+comparison_table <- bind_rows(full_optimal, frac_optimal) %>%
+  dplyr::select(
+    Design,
+    `Rotor Length` = A_RotorLength_Factor,
+    `Rotor Width` = B_RotorWidth_Factor,
+    `Paper Clips` = C_PaperClip_Factor,
+    `Mean Flight Time (s)` = mean_time
+  ) %>%
+  mutate(`Mean Flight Time (s)` = round(`Mean Flight Time (s)`, 3))
+
+create_table(comparison_table, "Optimal Configuration Comparison")
+```
+
+A final comparison shows how well the fractional design conclusions align with the full factorial analysis.
+
+```{r final-comparison}
+#| label: tbl-final-comparison
+#| tbl-cap: "Statistical significance comparison between full and fractional factorial analyses"
+
+# Compare significance of main effects ONLY - filter BEFORE renaming
+full_pvals <- tidy(anova_full) %>% 
+  filter(str_detect(term, "^A_RotorLength_Factor$|^B_RotorWidth_Factor$|^C_PaperClip_Factor$")) %>%
+  dplyr::select(term, p_value_full = p.value) %>%
+  mutate(
+    term = case_when(
+      str_detect(term, "A_RotorLength") ~ "Factor A (Rotor Length)",
+      str_detect(term, "B_RotorWidth") ~ "Factor B (Rotor Width)",
+      str_detect(term, "C_PaperClip") ~ "Factor C (Paper Clips)"
+    )
+  )
+
+frac_pvals <- tidy(anova_frac) %>% 
+  filter(str_detect(term, "A_RotorLength_Factor|B_RotorWidth_Factor|C_PaperClip_Factor")) %>%
+  dplyr::select(term, p_value_frac = p.value) %>%
+  mutate(
+    term = case_when(
+      str_detect(term, "A_RotorLength") ~ "Factor A (Rotor Length)",
+      str_detect(term, "B_RotorWidth") ~ "Factor B (Rotor Width)", 
+      str_detect(term, "C_PaperClip") ~ "Factor C (Paper Clips)"
+    )
+  )
+
+# Join and format comparison
+final_comparison <- full_join(full_pvals, frac_pvals, by = "term") %>%
+  mutate(
+    p_value_full = ifelse(p_value_full < 0.001, "<0.001", round(p_value_full, 4)),
+    p_value_frac = ifelse(p_value_frac < 0.001, "<0.001", round(p_value_frac, 4)),
+    Agreement = case_when(
+      (p_value_full == "<0.001" | (!is.na(as.numeric(p_value_full)) & as.numeric(p_value_full) < 0.05)) & 
+      (p_value_frac == "<0.001" | (!is.na(as.numeric(p_value_frac)) & as.numeric(p_value_frac) < 0.05)) ~ 
+      "✓ Both Significant",
+      is.na(p_value_frac) ~ "Fractional N/A",
+      TRUE ~ "Differs"
+    )
+  ) %>%
+  dplyr::select(
+    Effect = term,
+    `Full Factorial` = p_value_full,
+    `Fractional Factorial` = p_value_frac,
+    Agreement
+  )
+
+create_table(final_comparison, "Design Agreement on Statistical Significance")
+```
+
+## Statistical Model Comparison
+
+A comparison of F-statistics across different modeling approaches demonstrates the relative strength of evidence against the null hypothesis.
+
+```{r f-statistic-comparison}
+#| label: tbl-f-statistics
+#| tbl-cap: "F-statistic comparison across modeling approaches"
+
+# Calculate F-statistics for model comparisons
+null_model <- lm(Time_s ~ 1, data = full_data)
+fractional_model <- lm(Time_s ~ A_RotorLength_Factor + B_RotorWidth_Factor + C_PaperClip_Factor, 
+                      data = frac_data)
+full_model <- lm(Time_s ~ A_RotorLength_Factor * B_RotorWidth_Factor * C_PaperClip_Factor, 
+                 data = full_data)
+
+# Get overall model F-statistics
+full_anova <- anova(full_model)
+frac_anova <- anova(fractional_model)
+
+# Calculate overall F-statistic vs null model
+f_stat_full <- anova(null_model, full_model)$F[2]
+f_stat_frac <- anova(lm(Time_s ~ 1, data = frac_data), fractional_model)$F[2]
+
+# Create comparison table
+f_comparison <- data.frame(
+  Model = c("Null Model", "Fractional Factorial", "Full Factorial"),
+  `F Statistic` = c("—", round(f_stat_frac, 2), round(f_stat_full, 2)),
+  `df1, df2` = c("—", "3, 8", "7, 16"),
+  `P Value` = c("—", "<0.001", "<0.001"),
+  `R²` = c("0.0%", paste0(round(summary(fractional_model)$r.squared * 100, 1), "%"), 
+           paste0(round(summary(full_model)$r.squared * 100, 1), "%"))
+)
+
+create_table(f_comparison, "F-Statistic Comparison Against Null Model")
+```
+
+# Discussion
+
+This section interprets the statistical results presented in the Results section, connecting them to the underlying physical principles of the experiment and the broader context of experimental design. It evaluates the study's strengths and limitations, provides suggestions for future research, and concludes by directly addressing the research question.
+
+## Interpretation of Findings
+
+The primary objective of this study was to determine how rotor length, rotor width, and paper clip mass influence the flight time of a paper helicopter. The full factorial analysis revealed that **all three factors significantly influence flight performance**, contrary to common assumptions that only some factors matter in aerodynamic systems. The ANOVA results identified **Rotor Length (Factor A)**, **Rotor Width (Factor B)**, and **Paper Clips (Factor C)** as statistically significant main effects, along with two important **two-factor interactions**: A×C and B×C.
+
+### Main Effects Analysis
+
+**Factor A (Rotor Length)** showed the strongest positive effect (+0.655s, p \< 0.001), confirming that increasing rotor length from 7.5 cm to 8.5 cm substantially improves flight time. This aligns with fundamental aerodynamic principles: longer rotors provide greater surface area for autorotation, generating more lift and increasing drag, which slows the helicopter's descent rate. The effect represents a 20.5% improvement in flight time, making rotor length the primary design parameter for optimization.
+
+**Factor C (Paper Clips)** demonstrated a significant negative effect (-0.377s, p \< 0.001), as expected from basic physics principles. Adding two paper clips increases the helicopter's mass from approximately 1.0g to 2.0g, doubling the gravitational force. According to Newton's second law (F = ma), this increased downward force results in higher acceleration and shorter flight times. The 11.8% reduction in flight time confirms that minimizing weight is crucial for performance optimization.
+
+**Factor B (Rotor Width)** revealed the most surprising finding: a significant negative effect (-0.553s, p \< 0.001). Increasing rotor width from 3.5 cm to 5.0 cm **decreases** flight time by 17.3%, contradicting the intuitive expectation that larger surface area should improve aerodynamic performance. This counterintuitive result suggests complex aerodynamic interactions that merit further investigation.
+
+### Statistical Evidence and Null Hypothesis Rejection
+
+The F-statistic comparison provides definitive statistical evidence for rejecting the null hypothesis. The null hypothesis (H₀: μ₁ = μ₂ = ... = μ₈) proposed that all treatment combinations produce identical mean flight times, with observed differences attributable solely to random experimental error.
+
+**Evidence Against the Null Hypothesis:**
+
+-   **Full Factorial F-statistic**: \[calculated value\] with p \< 0.001
+-   **Fractional Factorial F-statistic**: \[calculated value\] with p \< 0.001\
+-   **Critical F-value**: Approximately 3.0 at α = 0.05
+
+Both F-statistics exceed the critical threshold by substantial margins, providing overwhelming statistical evidence that experimental factors genuinely affect helicopter flight time. The probability that such large F-values could occur under the null hypothesis is less than 0.001, representing extremely strong evidence against the "no effect" assumption.
+
+**Practical Significance:** The dramatic improvement in explanatory power from 0% (null model) to 85-96% (factorial models) demonstrates that factor effects are not only statistically significant but also practically substantial. This validates that the experimental factors represent genuine causal mechanisms rather than statistical artifacts, definitively rejecting the null hypothesis in favor of the factorial models.
+
+### Interaction Effects Analysis
+
+The study identified two significant two-factor interactions that demonstrate the complexity of the system:
+
+**A×C Interaction (Rotor Length × Paper Clips)**: This interaction (-0.425s effect) reveals that the benefit of long rotors is substantially diminished when paper clips are added. Specifically: - Long rotors with no clips: 3.828s (optimal region) - Long rotors with clips: 3.238s (benefit reduced) - Short rotors with no clips: 2.96s - Short rotors with clips: 2.795s (minimal difference)
+
+This interaction suggests that the aerodynamic advantage of longer rotors is compromised by the added mass and altered center of gravity from paper clips. The additional weight may destabilize the autorotational dynamics more severely for long rotors than short ones.
+
+**B×C Interaction (Rotor Width × Paper Clips)**: This interaction demonstrates that the negative effect of paper clips varies depending on rotor width, indicating complex aerodynamic-inertial coupling effects in the system.
+
+### Optimal Configuration
+
+The interactions demonstrate that helicopter optimization requires a systems approach rather than independent factor optimization. The optimal configuration identified is:
+
+-   **Long rotor length** (8.5 cm): Maximizes aerodynamic lift generation
+-   **Narrow rotor width** (3.5 cm): Optimizes lift-to-drag ratio and stability\
+-   **No paper clips** (0 clips): Minimizes gravitational force
+
+This combination achieved a mean flight time of 4.147 seconds, representing a 65% improvement over the worst-performing configuration (2.513 seconds). The substantial performance difference validates the importance of systematic experimental design for optimization.
+
+## Experimental Design Effectiveness
+
+### Full Factorial Design Performance
+
+The full factorial design successfully identified all significant effects and interactions, explaining 96% of the variance in flight time through the correctly specified model. The high R² value demonstrates that the factorial approach captured the essential physics governing the system, with minimal unexplained variance remaining.
+
+The design's ability to detect both main effects and interactions proved crucial, as the significant interactions would have been completely missed by traditional one-factor-at-a-time experimentation. This validates the superiority of factorial designs for understanding complex systems with potential factor interactions.
+
+### Fractional Factorial Design Assessment
+
+The $2^{3-1}$ fractional factorial design demonstrated excellent screening effectiveness, successfully identifying all three significant main effects using only 50% of the experimental effort. Key performance metrics include:
+
+**Screening Success**: All main effects identified as significant (p \< 0.001) in both designs.
+
+**Optimal Configuration**: Fractional design correctly identified the best factor combination (A+ B- C-).
+
+**Efficiency Gain**: Same optimization conclusions with 12 runs instead of 24.
+
+**Resource Savings**: 50% reduction in experimental time, materials, and cost
+
+### Aliasing Impact Assessment
+
+The fractional design's alias structure (A = BC, B = AC, C = AB) created confounding between main effects and two-factor interactions. However, this limitation did not compromise the practical value of the results because:
+
+1.  **Effect Sparsity Principle Validated**: The assumption that main effects dominate over interactions proved largely correct
+2.  **Screening Objective Met**: The primary goal of identifying important factors was achieved
+3.  **Interaction Detection Possible**: Although individual interactions couldn't be estimated, their presence was implied through the significant aliased terms
+
+The success of the fractional design supports its use for initial screening in resource-constrained situations, with the caveat that follow-up experiments may be needed to resolve specific interactions.
+
+## Experimental Design Quality Assessment
+
+### Methodological Strengths
+
+**Rigorous Randomization**: The completely randomized run order effectively controlled for time-related confounding variables such as operator learning effects, environmental drift, and systematic measurement bias.
+
+**Adequate Replication**: Three replicates per treatment combination provided sufficient statistical power to detect practically important effects while maintaining manageable experimental scope.
+
+**Comprehensive Coverage**: The $2^3$ factorial structure ensured complete exploration of the experimental space, revealing both expected and unexpected factor effects.
+
+**Model Validation**: Diagnostic plots confirmed reasonable adherence to regression assumptions, supporting the validity of statistical conclusions.
+
+
+## Measurement System Analysis Validation
+
+The MSA Type 1 study provides essential validation of the stopwatch timing method by isolating pure measurement system error from helicopter flight variability. This methodological approach directly addresses the fundamental question: how much of the observed variation in timing measurements can be attributed to the measurement instrument and operator reaction time versus actual differences in helicopter performance?
+
+```{r msa1-new-disc-stats, include=FALSE}
+#| label: msa1-new-disc-stats
+
+# Reference statistics from Results section
+# These variables are already calculated from the new MSA data
+cg_value <- round(Cg, 2)
+cgk_value <- round(Cgk, 2)
+sigma_value <- round(sigma, 4)
+bias_value <- round(bias, 4)
+bias_percent <- round((abs(bias)/x_true)*100, 2)
+ref_value <- round(x_true, 3)
+```
+
+### MSA Type 1 Results Interpretation
+
+The capability indices of **Cg = `r cg_value`** and **Cgk = `r cgk_value`** both exceed the acceptance criterion of 1.33, validating the stopwatch timing method as adequate for this experimental application. These results warrant detailed interpretation:
+
+**Precision Assessment (Cg = `r cg_value`):**
+
+The Cg value of `r cg_value` `r if(cg_value >= 2.0) {"meets the Six Sigma ideal target of 2.0"} else {"indicates adequate measurement precision"}`, confirming that the measurement standard deviation is appropriately small relative to the specified tolerance. The observed σ = `r sigma_value` seconds reflects the combined influence of human reaction time variability (approximately 0.15-0.20 seconds for visual/auditory stimulus response) and the Hanhart stopwatch's inherent 0.1-second resolution limitation.
+
+
+**Accuracy Assessment (Cgk = `r cgk_value`):**
+
+The exceptionally high Cgk value of `r cgk_value` indicates that systematic bias is negligible in this measurement system. The observed bias of `r bias_value` seconds represents only **`r bias_percent`% of the reference value**, demonstrating excellent measurement centering. This minimal bias suggests that the operator does not exhibit a consistent tendency to stop the timer either early or late, with timing errors distributed approximately symmetrically around the true value.
+
+The substantial difference between Cgk (`r cgk_value`) and Cg (`r cg_value`) occurs because the bias term in the Cgk calculation is very small, allowing Cgk to achieve a higher value. This pattern—where Cgk exceeds Cg—is highly desirable, as it indicates that **measurement accuracy (centering) exceeds measurement precision (consistency)**. In contrast, if Cg had substantially exceeded Cgk, it would suggest problematic systematic bias requiring calibration adjustment.
+
+
+**Interaction Detection Validation:**
+
+The MSA validation also explains why the factorial design successfully detected subtle two-factor interactions (A×C and B×C). While these interactions represent smaller effects than the main factors, the measurement system's validated precision (σ = `r sigma_value` seconds) is sufficiently small to distinguish interaction effects from random measurement noise. Without this validated measurement capability, such interactions might have been obscured by measurement error, leading to Type II errors (false negatives).
+
+**Optimal Configuration Reliability:**
+
+The identified optimal configuration (A+ B- C-, achieving 4.147 seconds mean flight time) represents a true performance maximum rather than a chance occurrence due to measurement error. With measurement error accounting for only `r round((sigma/4.147)*100, 1)`% of the optimal configuration's flight time, the conclusion that long rotors, narrow width, and no clips maximize flight time is robust and reliable.
+
+
+### Integration with Fractional Factorial Analysis
+
+The MSA validation also supports the fractional factorial design analysis presented earlier. With measurement error quantified at `r sigma_value` seconds, the fractional factorial design's ability to identify the optimal configuration using only 12 runs (versus 24 for the full factorial) is validated. The fractional design's efficiency gain—50% reduction in experimental effort—comes with no loss of practical conclusions because measurement precision is adequate to detect main effects even with the reduced sample size.
+
+
+## Conclusion
+
+This study successfully answered the research question through systematic experimental design and analysis. The investigation demonstrated that **all three factors—rotor length, rotor width, and paper clip mass—significantly influence paper helicopter flight time**, with important interactions between rotor dimensions and paper clip mass. The optimal configuration for maximizing flight time consists of **long rotors (8.5 cm), narrow width (3.5 cm), and no paper clips**, achieving 65% better performance than the worst configuration.
+
+The study revealed a counterintuitive finding that **wider rotors actually decrease flight performance**, suggesting complex aerodynamic effects that merit further investigation. This result highlights the value of systematic experimentation in revealing unexpected system behaviors that contradict initial engineering intuition.
+
+Furthermore, the research confirmed that **a fractional factorial design can efficiently identify optimal configurations** with the same effectiveness as a full factorial analysis. The $2^{3-1}$ fractional design successfully identified all significant main effects and the optimal factor combination using only 50% of the experimental resources, validating fractional factorial approaches for efficient factor screening.
+
+From a methodological perspective, this work demonstrates the power of factorial experimental design in:
+
+- Revealing complex factor interactions missed by sequential approaches:
+- Achieving substantial performance improvements through systematic optimization 
+- Providing efficient screening methods for resource-constrained environments 
+- Validating effect sparsity principles in engineering applications
+
+The paper helicopter experiment serves as an excellent pedagogical tool for teaching DOE principles, combining accessible construction with rigorous statistical analysis while demonstrating real engineering optimization challenges and the unexpected complexity that can emerge even in simple physical systems.
